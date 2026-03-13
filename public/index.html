@@ -916,6 +916,10 @@
     <div class="banner-price-block">
       <span class="banner-new-price">₹1799</span>
     </div>
+    <div class="custom-candle-options" style="margin-bottom: 15px; text-align: left;">
+  <label for="candle-notes" style="display: block; font-size: 14px; margin-bottom: 5px; font-weight: bold;">What issues or intentions should this candle focus on?</label>
+  <textarea id="candle-notes" placeholder="e.g., career growth, peace, focus, health..." rows="3" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-family: inherit; resize: vertical;"></textarea>
+</div>
     <button class="btn-primary" onclick="addToCart(1000, event)">Add to Cart</button>
   </div>
   <div class="banner-right">
@@ -1199,16 +1203,38 @@ function filterProducts(filter, btn) {
 
 // ── CART ──
 function addToCart(id, event) {
-  if (event) event.stopPropagation();
-  const product = products.find(p => p.id === id);
-  const existing = cart.find(i => i.id === id);
-  if (existing) {
-    existing.qty++;
-  } else {
-    cart.push({ ...product, qty: 1 });
-  }
-  updateCart();
-  showToast(product.emoji, product.name, product.price);
+    if (event) event.stopPropagation();
+    
+    let customNotes = "";
+    
+    // --- NEW: Check for Custom Candle (ID 1000) ---
+    if (id === 1000) {
+        const notesInput = document.getElementById('candle-notes');
+        if (notesInput) {
+            customNotes = notesInput.value.trim();
+            // Stop them if the box is empty!
+            if (customNotes === "") {
+                alert("Please tell us your intentions for the custom candle before adding to cart!");
+                return; 
+            }
+        }
+    }
+    // ----------------------------------------------
+
+    const product = products.find(p => p.id === id);
+    const existing = cart.find(i => i.id === id);
+    
+    if (existing) {
+        existing.qty++;
+        // If they click add again, update the notes to the newest text
+        if (id === 1000) existing.notes = customNotes; 
+    } else {
+        // Add the notes property into the cart array
+        cart.push({ ...product, qty: 1, notes: customNotes });
+    }
+    
+    updateCart();
+    showToast(product.emoji, product.name, product.price);
 }
 
 function updateCart() {
@@ -1448,3 +1474,4 @@ renderProducts('all');
 </script>
 </body>
 </html>
+
