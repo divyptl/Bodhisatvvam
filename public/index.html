@@ -904,8 +904,7 @@
     <div class="products-count" id="productsCount">Loading...</div>
   </div>
 <div class="search-container" style="text-align: center; margin: 20px 0;">
-    <input type="text" id="searchBar" onkeyup="filterProducts()" placeholder="🔍 Search for candles, salts, energy..." style="width: 80%; max-width: 400px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
-</div>
+    <input type="text" id="searchBar" onkeyup="searchProducts()" placeholder="🔍 Search for candles, salts, energy..." style="width: 80%; max-width: 400px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"></div>
   <div class="products-grid" id="productsGrid">
     </div>
 </section>
@@ -1204,6 +1203,20 @@ function filterProducts(filter, btn) {
 }
 
 // ── CART ──
+  // ── SEARCH BAR ──
+function searchProducts() {
+    let input = document.getElementById('searchBar').value.toLowerCase();
+    let productCards = document.querySelectorAll('.product-card'); 
+
+    productCards.forEach(function(card) {
+        // We use innerText so it searches the name, category, AND description!
+        if (card.innerText.toLowerCase().includes(input)) {
+            card.style.display = ""; // Show
+        } else {
+            card.style.display = "none"; // Hide
+        }
+    });
+}
 function addToCart(id, event) {
     if (event) event.stopPropagation();
     
