@@ -8,10 +8,10 @@ app.use(express.json());
 // Serve the frontend UI
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Environment Variables
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || 'EAAUVDhZATxZAgBQxwe7ZAdmJOrSiiEgshgFL8DzoNhfJk2dsaa8RtjaHHAVGZBRWAAub7GJi1lnppIlEXL4bfVMwrQ6bk5pnI8g6ViDWoaLQeZArg7ZCKP3YkZCdZBaqVhZAAoZBnaZB0lXSw0SryzbZAtdAPwv6easOIZBadVwwYw1gOVvIN9pLdvnVjeCtg9tcldAZDZD';
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || '1047297138466995';
-const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyyoMmBkcgOd3imOws3qcJfRkgtzc2tTSYiZNbSNaxJi-UwpsuNj1nOLsEl2Tb0AT_h/exec';
+// Environment Variables// Environment Variables
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL;
 
 app.post('/api/order', async (req, res) => {
     const { name, phone, address, items, total } = req.body;
