@@ -19,35 +19,28 @@ app.post('/api/order', async (req, res) => {
 
     console.log(`Processing Order ${orderId} for ${name}`);
 
-    // 1. Format the WhatsApp Message
+
     const messageBody = `*Namaste ${name},*\n\nThank you for choosing Bodhisatvvam! ✨\n\n*Order Details (${orderId}):*\nItems: ${items}\nTotal: ${total}\nDelivery to: ${address}\n\nWe will review your request and confirm your order shortly.\n\nEmpower Your Life,\n-Shree Bodhisatvvam Team`;
 
     try {
-        // 2. Send WhatsApp Confirmation
-        if (WHATSAPP_TOKEN !== 'EAAUVDhZATxZAgBQxwe7ZAdmJOrSiiEgshgFL8DzoNhfJk2dsaa8RtjaHHAVGZBRWAAub7GJi1lnppIlEXL4bfVMwrQ6bk5pnI8g6ViDWoaLQeZArg7ZCKP3YkZCdZBaqVhZAAoZBnaZB0lXSw0SryzbZAtdAPwv6easOIZBadVwwYw1gOVvIN9pLdvnVjeCtg9tcldAZDZD') {
-            await axios.post(
-                `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
-                {
-                    messaging_product: "whatsapp",
-                    to: phone.replace(/\D/g, ''), // Strips non-numeric characters
-                    type: "text",
-                    text: { body: messageBody }
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    }
+        await axios.post(
+            `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
+            {
+                messaging_product: "whatsapp",
+                to: phone.replace(/\D/g, ''), // Strips non-numeric characters
+                type: "text",
+                text: { body: messageBody }
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+                    'Content-Type': 'application/json'
                 }
-            );
-        }
-
-        // 3. Push to Google Sheets in Surat
-        if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbyyoMmBkcgOd3imOws3qcJfRkgtzc2tTSYiZNbSNaxJi-UwpsuNj1nOLsEl2Tb0AT_h/exec') {
-            await axios.post(GOOGLE_SCRIPT_URL, {
-                orderId, name, phone, address, items, total
-            });
-        }
+            }
+        );
+        await axios.post(GOOGLE_SCRIPT_URL, {
+            orderId, name, phone, address, items, total
+        });
 
         res.status(200).json({ success: true, message: "Order logged and notified." });
     } catch (error) {
@@ -56,19 +49,6 @@ app.post('/api/order', async (req, res) => {
     }
 });
 
-function filterProducts() {
-    let input = document.getElementById('searchBar').value.toLowerCase();
-    let productCards = document.getElementsByClassName('products-grid'); 
-
-    for (let i = 0; i < productCards.length; i++) {
-        let productName = productCards[i].innerText.toLowerCase();
-        if (productName.includes(input)) {
-            productCards[i].style.display = "";
-        } else {
-            productCards[i].style.display = "none";
-        }
-    }
-}
 // Start the server and force it to bind to Render's port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
