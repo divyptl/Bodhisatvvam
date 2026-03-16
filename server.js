@@ -9,8 +9,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Environment Variables
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || 'YOUR_TEMPORARY_META_TOKEN';
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || 'YOUR_PHONE_NUMBER_ID';
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || 'EAAUVDhZATxZAgBQxwe7ZAdmJOrSiiEgshgFL8DzoNhfJk2dsaa8RtjaHHAVGZBRWAAub7GJi1lnppIlEXL4bfVMwrQ6bk5pnI8g6ViDWoaLQeZArg7ZCKP3YkZCdZBaqVhZAAoZBnaZB0lXSw0SryzbZAtdAPwv6easOIZBadVwwYw1gOVvIN9pLdvnVjeCtg9tcldAZDZD';
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || '1047297138466995';
 const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyyoMmBkcgOd3imOws3qcJfRkgtzc2tTSYiZNbSNaxJi-UwpsuNj1nOLsEl2Tb0AT_h/exec';
 
 app.post('/api/order', async (req, res) => {
@@ -20,11 +20,11 @@ app.post('/api/order', async (req, res) => {
     console.log(`Processing Order ${orderId} for ${name}`);
 
     // 1. Format the WhatsApp Message
-    const messageBody = `*Namaste ${name},*\n\nThank you for choosing Bodhisatvvam! ✨\n\n*Order Details (${orderId}):*\nItems: ${items}\nTotal: ${total}\nDelivery to: ${address}\n\nWe will review your request and Neepa will connect with you shortly to confirm your order.\n\nEmpower Your Life,\n- Bodhisatvvam Team`;
+    const messageBody = `*Namaste ${name},*\n\nThank you for choosing Bodhisatvvam! ✨\n\n*Order Details (${orderId}):*\nItems: ${items}\nTotal: ${total}\nDelivery to: ${address}\n\nWe will review your request and confirm your order shortly.\n\nEmpower Your Life,\n-Shree Bodhisatvvam Team`;
 
     try {
         // 2. Send WhatsApp Confirmation
-        if (WHATSAPP_TOKEN !== 'YOUR_TEMPORARY_META_TOKEN') {
+        if (WHATSAPP_TOKEN !== 'EAAUVDhZATxZAgBQxwe7ZAdmJOrSiiEgshgFL8DzoNhfJk2dsaa8RtjaHHAVGZBRWAAub7GJi1lnppIlEXL4bfVMwrQ6bk5pnI8g6ViDWoaLQeZArg7ZCKP3YkZCdZBaqVhZAAoZBnaZB0lXSw0SryzbZAtdAPwv6easOIZBadVwwYw1gOVvIN9pLdvnVjeCtg9tcldAZDZD') {
             await axios.post(
                 `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
                 {
@@ -43,7 +43,7 @@ app.post('/api/order', async (req, res) => {
         }
 
         // 3. Push to Google Sheets in Surat
-        if (GOOGLE_SCRIPT_URL !== 'PASTE_YOUR_WEB_APP_URL_HERE') {
+        if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbyyoMmBkcgOd3imOws3qcJfRkgtzc2tTSYiZNbSNaxJi-UwpsuNj1nOLsEl2Tb0AT_h/exec') {
             await axios.post(GOOGLE_SCRIPT_URL, {
                 orderId, name, phone, address, items, total
             });
@@ -56,6 +56,19 @@ app.post('/api/order', async (req, res) => {
     }
 });
 
+function filterProducts() {
+    let input = document.getElementById('searchBar').value.toLowerCase();
+    let productCards = document.getElementsByClassName('products-grid'); 
+
+    for (let i = 0; i < productCards.length; i++) {
+        let productName = productCards[i].innerText.toLowerCase();
+        if (productName.includes(input)) {
+            productCards[i].style.display = "";
+        } else {
+            productCards[i].style.display = "none";
+        }
+    }
+}
 // Start the server and force it to bind to Render's port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
