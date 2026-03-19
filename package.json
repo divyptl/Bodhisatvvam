@@ -1,17 +1,22 @@
 {
-  "name": "bodhisatvvam",
-  "version": "1.0.0",
-  "description": "",
-  "main": "server.js.js",
+  "name": "bodhisatvvam-backend",
+  "version": "2.0.0",
+  "description": "Bodhisatvvam e-commerce backend — hardened & production-ready",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "axios": "^1.13.6",
-    "express": "^5.2.1"
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
