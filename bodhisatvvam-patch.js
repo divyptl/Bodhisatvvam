@@ -18,7 +18,7 @@
 // ── CONFIG ────────────────────────────────────────────────────
 // ⚠️  Replace this with your actual Render URL.
 // This is the ONLY place you need to change it.
-const API_BASE = 'https://YOUR-RENDER-APP-NAME.onrender.com';
+const API_BASE = 'https://bodhisatvvam.onrender.com/';
 
 
 // ── CART STATE ────────────────────────────────────────────────
