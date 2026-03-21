@@ -47,10 +47,21 @@ const razorpay = (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET)
     : null;
 
 // ── 3. MIDDLEWARE ────────────────────────────────────────────
+// Supports single origin, comma-separated list, or * wildcard
+const allowedOrigins = ALLOWED_ORIGIN === '*'
+    ? ['*']
+    : ALLOWED_ORIGIN.split(',').map(o => o.trim());
+
 app.use(cors({
-    origin: ALLOWED_ORIGIN,
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes('*')) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, origin);
+        callback(new Error('CORS blocked: ' + origin));
+    },
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
+    credentials: false,
 }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
