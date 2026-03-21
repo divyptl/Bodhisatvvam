@@ -1572,8 +1572,8 @@ function observeAnimations() {
       const y = r * Math.sin(rad);
       dot.style.transform = `translate(${x - 5}px, ${y - 5}px)`;
       dot.style.top = '50%';
-      dot.style.left = '50%'
-    animateDots();
+      dot.style.left = '50%';
+    });
     requestAnimationFrame(animateDots);
   }
   animateDots();
