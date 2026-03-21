@@ -904,7 +904,7 @@
     <div class="products-count" id="productsCount">Loading...</div>
   </div>
 <div class="search-container" style="text-align: center; margin: 20px 0;">
-    <input type="text" id="searchBar" onkeyup="searchProducts()" placeholder="🔍 Search for candles, salts, energy..." style="width: 80%; max-width: 400px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"></div>
+    <input type="text" id="searchBar" placeholder="🔍 Search for candles, salts, energy..." style="width: 80%; max-width: 400px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"></div>
   <div class="products-grid" id="productsGrid">
     </div>
 </section>
@@ -957,7 +957,7 @@
       <div class="footer-col-title">Contact</div>
       <ul class="footer-links">
         <li><p>WhatsApp: +91 9737171090</p></li>
-        <li><p>Email: shreebodhisatvvam@gmail.com</p></li>
+        <li><p>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="691a011b0c0c0b060d01001a081d1f1f0804290e04080005470a0604">[email&#160;protected]</a></p></li>
         <li><p>Web: www.shreebodhisatvvam.com</p></li>
       </ul>
     </div>
@@ -1034,7 +1034,7 @@
         <input type="text" class="form-input" id="zipCode" placeholder="000000">
       </div>
 
-      <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()">✨ Confirm via WhatsApp</button>
+      <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()">💳 Pay Now</button>
     </div>
   </div>
 </div>
@@ -1053,7 +1053,7 @@
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── MASSIVE PRODUCT DATA ARRAY ──
 // Note: Placeholder prices are used for Salts (₹599) and Healing Sessions (₹2499). You can easily change the numbers below!
 const products = [
@@ -1250,6 +1250,12 @@ function addToCart(id, event) {
     
     updateCart();
     showToast(product.emoji, product.name, product.price);
+    // Bump the cart button for visual feedback
+    const cartBtn = document.querySelector('.cart-btn');
+    if (cartBtn) {
+      cartBtn.classList.add('cart-bump');
+      setTimeout(() => cartBtn.classList.remove('cart-bump'), 400);
+    }
 }
 
 function updateCart() {
@@ -1333,11 +1339,48 @@ function closeCheckout() {
   document.body.style.overflow = '';
 }
 
-// ── REAL BACKEND CONNECTION ──
-async function placeOrder() {
+// ── BACKEND CONNECTION ──
+// ⚠️ Replace this with your actual Render URL — the ONLY place you need to change it.
+// ⚠️ Replace with your actual Render URL — only place you need to change it
+const API_BASE = 'https://YOUR-RENDER-APP-NAME.onrender.com';
+
+// ── HELPERS ──────────────────────────────────────────────────
+
+function setCheckoutError(message) {
+  let el = document.getElementById('checkoutError');
+  if (!el) {
+    el = document.createElement('p');
+    el.id = 'checkoutError';
+    el.style.cssText = 'color:#b85c38;font-size:0.85rem;margin:8px 0 4px;text-align:center;font-family:Jost,sans-serif;';
+    const btn = document.getElementById('placeOrderBtn');
+    btn.parentNode.insertBefore(el, btn);
+  }
+  el.textContent = message || '';
+  el.style.display = message ? 'block' : 'none';
+}
+
+function setBtn(text, disabled) {
+  const btn = document.getElementById('placeOrderBtn');
+  btn.innerText = text;
+  btn.disabled = disabled;
+}
+
+function collectOrderData() {
+  return {
+    name:    document.getElementById('firstName').value.trim() + ' ' + document.getElementById('lastName').value.trim(),
+    phone:   document.getElementById('phoneNum').value.trim(),
+    address: document.getElementById('streetAddr').value.trim() + ', ' +
+             document.getElementById('city').value.trim() + ', ' +
+             document.getElementById('state').value.trim() + ' ' +
+             document.getElementById('zipCode').value.trim(),
+    items:   cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+    total:   '₹' + cart.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2),
+  };
+}
+
+function validateForm() {
   const required = ['firstName', 'lastName', 'phoneNum', 'streetAddr', 'city', 'state', 'zipCode'];
   let valid = true;
-  
   required.forEach(id => {
     const el = document.getElementById(id);
     if (!el.value.trim()) {
@@ -1346,56 +1389,110 @@ async function placeOrder() {
       setTimeout(() => { el.style.borderColor = ''; }, 3000);
     }
   });
+  if (!valid) { setCheckoutError('Please fill all required fields.'); return false; }
+  const digits = document.getElementById('phoneNum').value.replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 13) {
+    setCheckoutError('Please enter a valid 10-digit WhatsApp number.');
+    document.getElementById('phoneNum').style.borderColor = '#b85c38';
+    return false;
+  }
+  setCheckoutError('');
+  return true;
+}
 
-  if (!valid) return alert("Please fill all required fields.");
+function showSuccess(orderId) {
+  document.getElementById('successOrderId').textContent = orderId || '#BDH-????';
+  closeCheckout();
+  setTimeout(() => {
+    document.getElementById('successOverlay').classList.add('open');
+    cart = [];
+    updateCart();
+  }, 300);
+}
 
-  const btn = document.getElementById('placeOrderBtn');
-  btn.innerText = "Processing...";
-  btn.disabled = true;
+// ── RAZORPAY PAYMENT FLOW ─────────────────────────────────────
+// Step 1: Validate form → ask server to create a Razorpay order
+// Step 2: Open Razorpay checkout popup
+// Step 3: On payment success → verify signature on server → log to Sheet + WhatsApp
 
-  // Gather Data for our Render Server
-  const orderData = {
-      name: document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value,
-      phone: document.getElementById('phoneNum').value,
-      address: `${document.getElementById('streetAddr').value}, ${document.getElementById('city').value}, ${document.getElementById('state').value} ${document.getElementById('zipCode').value}`,
-      items: cart.map(i => `${i.name} (x${i.qty})`).join(', '),
-      total: document.getElementById('cartTotal').innerText
-  };
+async function placeOrder() {
+  if (!validateForm()) return;
+
+  const orderData = collectOrderData();
+  setBtn('⏳ Initiating Payment…', true);
 
   try {
-      // Sends data to server.js
-      const response = await fetch('/api/order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData)
-      });
-      
-      if(response.ok) {
-          const orderId = '#BDH-' + Math.floor(10000 + Math.random() * 90000);
-          document.getElementById('successOrderId').textContent = orderId;
-          closeCheckout();
-          setTimeout(() => {
-              document.getElementById('successOverlay').classList.add('open');
-              cart = [];
-              updateCart();
-          }, 300);
-      } else {
-          alert("Error processing order. Please try again.");
+    // STEP 1 — Create Razorpay order on the server
+    const createRes  = await fetch(`${API_BASE}/api/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    });
+    const createData = await createRes.json();
+
+    if (!createRes.ok || !createData.success) {
+      setCheckoutError(createData.message || 'Could not start payment. Please try again.');
+      setBtn('💳 Pay Now', false);
+      return;
+    }
+
+    setBtn('💳 Pay Now', false);
+
+    // STEP 2 — Open Razorpay checkout popup
+    const rzpOptions = {
+      key:         createData.keyId,
+      amount:      createData.amount,
+      currency:    createData.currency,
+      name:        'Bodhisatvvam',
+      description: `Order ${createData.bodhiOrderId}`,
+      order_id:    createData.razorpayOrderId,
+      prefill:     createData.prefill,
+      theme:       { color: '#1c3a28' },
+      modal: {
+        ondismiss: () => {
+          setBtn('💳 Pay Now', false);
+          setCheckoutError('Payment was cancelled. You can try again.');
+        }
+      },
+
+      // STEP 3 — Payment succeeded — verify on server
+      handler: async function(response) {
+        setBtn('⏳ Confirming Payment…', true);
+        try {
+          const verifyRes  = await fetch(`${API_BASE}/api/verify-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+              bodhiOrderId:        createData.bodhiOrderId,
+              ...orderData,
+            }),
+          });
+          const verifyData = await verifyRes.json();
+
+          if (verifyRes.ok && verifyData.success) {
+            showSuccess(verifyData.orderId);
+          } else {
+            setCheckoutError(verifyData.message || 'Payment received but confirmation failed. Please WhatsApp us with your payment ID: ' + response.razorpay_payment_id);
+          }
+        } catch (err) {
+          console.error('Verify failed:', err.message);
+          setCheckoutError('Payment done but confirmation failed. Please WhatsApp us with: ' + response.razorpay_payment_id);
+        } finally {
+          setBtn('💳 Pay Now', false);
+        }
       }
-  } catch (error) {
-      // Fallback for testing locally without a backend
-      console.log("No backend detected. Simulating success for testing.");
-      const orderId = '#BDH-' + Math.floor(10000 + Math.random() * 90000);
-      document.getElementById('successOrderId').textContent = orderId;
-      closeCheckout();
-      setTimeout(() => {
-          document.getElementById('successOverlay').classList.add('open');
-          cart = [];
-          updateCart();
-      }, 300);
-  } finally {
-      btn.innerText = "✨ Confirm via WhatsApp";
-      btn.disabled = false;
+    };
+
+    const rzp = new Razorpay(rzpOptions);
+    rzp.open();
+
+  } catch (err) {
+    console.error('Payment init failed:', err.message);
+    setCheckoutError('Could not connect to payment server. Please try again or contact us on WhatsApp.');
+    setBtn('💳 Pay Now', false);
   }
 }
 
@@ -1475,19 +1572,45 @@ function observeAnimations() {
       const y = r * Math.sin(rad);
       dot.style.transform = `translate(${x - 5}px, ${y - 5}px)`;
       dot.style.top = '50%';
-      dot.style.left = '50%';
-      dot.style.marginTop = '-5px';
-      dot.style.marginLeft = '-5px';
-    });
+      dot.style.left = '50%'
+    animateDots();
     requestAnimationFrame(animateDots);
   }
   animateDots();
 })();
 
-// ── INIT ──
-renderProducts('all');
+// ── INIT: wire up search bar via addEventListener ──
+document.addEventListener('DOMContentLoaded', () => {
+  const searchBar = document.getElementById('searchBar');
+  if (searchBar) {
+    searchBar.addEventListener('keyup', searchProducts);
+    searchBar.addEventListener('input', searchProducts);
+  }
+  renderProducts('all');
+  observeAnimations();
+});
+
 </script>
-  <script src="bodhisatvvam-patch.js" > </script>
+
+<style>
+/* ── Mobile Fix: hero-right rotating visual ── */
+@media (max-width: 680px) {
+  .hero-right { min-height: 320px; }
+  .hero-circle { width: 240px !important; height: 240px !important; }
+  .hero-floating-badge { bottom: 16px; right: 16px; padding: 12px 16px; }
+  .hero-center-art { padding: 30px; }
+}
+/* Cart bump animation */
+@keyframes cartBump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.3); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.cart-btn.cart-bump { animation: cartBump 0.4s ease; }
+</style>
+
+<!-- Razorpay Checkout SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>
 </html>
-
