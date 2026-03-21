@@ -1,7 +1,7 @@
 {
   "name": "bodhisatvvam-backend",
-  "version": "2.0.0",
-  "description": "Bodhisatvvam e-commerce backend — hardened & production-ready",
+  "version": "3.0.0",
+  "description": "Bodhisatvvam backend — with Razorpay payment integration",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,7 +11,8 @@
     "axios": "^1.7.2",
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "express-rate-limit": "^7.3.1"
+    "express-rate-limit": "^7.3.1",
+    "razorpay": "^2.9.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
