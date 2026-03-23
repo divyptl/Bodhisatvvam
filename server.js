@@ -117,19 +117,25 @@ function toPaise(total) {
     return Math.round(num * 100); // ₹599.00 → 59900 paise
 }
 
-async function pushToSheet(payload) {
+async function pushToSheet(payload, attempt = 1) {
     if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_SECRET) return false;
     try {
         await axios.post(
             GOOGLE_SCRIPT_URL,
             { secret: GOOGLE_SCRIPT_SECRET, ...payload },
-            { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+            { headers: { 'Content-Type': 'application/json' }, timeout: 25000 }
         );
         console.log(`✅ Sheet updated → ${payload.orderId}`);
         return true;
     } catch (err) {
         const status = err?.response?.status || 'no-response';
-        console.error(`❌ Sheet error → HTTP ${status}: ${err.message}`);
+        console.error(`❌ Sheet error (attempt ${attempt}) → HTTP ${status}: ${err.message}`);
+        // Retry once after 3 seconds if it timed out
+        if (attempt === 1 && err.code === 'ECONNABORTED') {
+            console.log(`   Retrying sheet update in 3s...`);
+            await new Promise(r => setTimeout(r, 3000));
+            return pushToSheet(payload, 2);
+        }
         return false;
     }
 }
