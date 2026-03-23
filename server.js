@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-//  Bodhisatvvam — Backend Server v3 (Razorpay Integration)
+//  Bodhisatvvam -- Backend Server v3 (Razorpay Integration)
 //  New in this version:
-//    ✅ POST /api/create-order  — creates Razorpay order, returns order_id + key
-//    ✅ POST /api/verify-payment — verifies signature, then logs to Sheet + WhatsApp
-//    ✅ Razorpay signature verification (HMAC-SHA256) — prevents fake payment claims
+//    ✅ POST /api/create-order  -- creates Razorpay order, returns order_id + key
+//    ✅ POST /api/verify-payment -- verifies signature, then logs to Sheet + WhatsApp
+//    ✅ Razorpay signature verification (HMAC-SHA256) -- prevents fake payment claims
 //    ✅ All previous hardening retained (CORS, rate limit, validation, sanitized logs)
 // ═══════════════════════════════════════════════════════════
 
@@ -11,13 +11,13 @@ const express   = require('express');
 const axios     = require('axios');
 const path      = require('path');
 const cors      = require('cors');
-const crypto    = require('crypto'); // Built-in Node.js — no install needed
+const crypto    = require('crypto'); // Built-in Node.js -- no install needed
 const rateLimit = require('express-rate-limit');
 const Razorpay  = require('razorpay');
 
 const app = express();
 
-// ── 1. ENV SAFETY CHECK ─────────────────────────────────────
+// -- 1. ENV SAFETY CHECK -------------------------------------------
 const REQUIRED_ENV = [
     'WHATSAPP_TOKEN',
     'PHONE_NUMBER_ID',
@@ -41,12 +41,12 @@ const ALLOWED_ORIGIN       = process.env.ALLOWED_ORIGIN || '*';
 const RAZORPAY_KEY_ID      = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET  = process.env.RAZORPAY_KEY_SECRET;
 
-// ── 2. RAZORPAY CLIENT ───────────────────────────────────────
+// -- 2. RAZORPAY CLIENT ---------------------------------------------
 const razorpay = (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET)
     ? new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET })
     : null;
 
-// ── 3. MIDDLEWARE ────────────────────────────────────────────
+// -- 3. MIDDLEWARE --------------------------------------------------------
 // Supports single origin, comma-separated list, or * wildcard
 const allowedOrigins = ALLOWED_ORIGIN === '*'
     ? ['*']
@@ -66,7 +66,7 @@ app.use(cors({
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── 4. RATE LIMITERS ─────────────────────────────────────────
+// -- 4. RATE LIMITERS -----------------------------------------------------
 const orderLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10, // slightly higher since create + verify = 2 calls per order
@@ -75,7 +75,7 @@ const orderLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// ── 5. HELPERS ───────────────────────────────────────────────
+// -- 5. HELPERS -----------------------------------------------------------
 function generateOrderId() {
     const ts  = Date.now().toString(36).toUpperCase();
     const rnd = Math.floor(1000 + Math.random() * 9000);
@@ -106,7 +106,7 @@ function validateOrderInput({ name, phone, address, items, total }) {
 
 function formatItemsForWhatsApp(items) {
     if (Array.isArray(items)) {
-        return items.map(i => `• ${i.name} ×${i.qty} — ₹${i.price}`).join('\n');
+        return items.map(i => `- ${i.name} x${i.qty} @ Rs.${i.price}`).join('\n');
     }
     return String(items);
 }
@@ -141,14 +141,14 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
             `*Namaste ${name},* 🙏\n\n` +
             `Your payment was successful! ✨\n\n` +
             `*Order Confirmed (${orderId})*\n` +
-            `────────────────────\n` +
+            `--------------------------\n` +
             `${formatItemsForWhatsApp(items)}\n` +
-            `────────────────────\n` +
+            `--------------------------\n` +
             `*Total Paid:* ${total}\n` +
             `*Delivery to:* ${address}\n\n` +
             `We will dispatch your order shortly and keep you updated here.\n\n` +
             `_Empower Your Life_ 🌸\n` +
-            `— Shree Bodhisatvvam Team`;
+            `-- Shree Bodhisatvvam Team`;
 
         await axios.post(
             `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
@@ -164,8 +164,8 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
     }
 }
 
-// ── 6. ROUTE: CREATE RAZORPAY ORDER ─────────────────────────
-// Called when customer clicks "Pay Now" — before payment happens.
+// -- 6. ROUTE: CREATE RAZORPAY ORDER -------------------------------
+// Called when customer clicks "Pay Now" -- before payment happens.
 // Creates a Razorpay order and returns the order_id to the frontend.
 app.post('/api/create-order', orderLimiter, async (req, res) => {
     const { name, phone, address, items, total } = req.body;
@@ -202,11 +202,11 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         // Return everything the frontend Razorpay SDK needs
         return res.status(200).json({
             success:       true,
-            razorpayOrderId: rzpOrder.id,     // rzp_order_xxx — used by the JS SDK
-            bodhiOrderId,                      // #BDH-xxx — shown to customer
+            razorpayOrderId: rzpOrder.id,     // rzp_order_xxx -- used by the JS SDK
+            bodhiOrderId,                      // #BDH-xxx -- shown to customer
             amount:        amountPaise,
             currency:      'INR',
-            keyId:         RAZORPAY_KEY_ID,   // Public key — safe to send to frontend
+            keyId:         RAZORPAY_KEY_ID,   // Public key -- safe to send to frontend
             prefill: {
                 name,
                 contact: phone.replace(/\D/g, ''),
@@ -219,7 +219,7 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
     }
 });
 
-// ── 7. ROUTE: VERIFY PAYMENT + FULFIL ORDER ──────────────────
+// -- 7. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
 // Called AFTER Razorpay payment succeeds on the frontend.
 // Verifies the HMAC signature (proves payment is real), then logs + notifies.
 app.post('/api/verify-payment', orderLimiter, async (req, res) => {
@@ -237,14 +237,14 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
     } = req.body;
 
     // 7a. Verify Razorpay HMAC signature
-    // This is the critical security step — without it anyone could fake a payment
+    // This is the critical security step -- without it anyone could fake a payment
     const expectedSignature = crypto
         .createHmac('sha256', RAZORPAY_KEY_SECRET)
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
         .digest('hex');
 
     if (expectedSignature !== razorpay_signature) {
-        console.error(`❌ Signature mismatch for ${bodhiOrderId} — possible fraud attempt`);
+        console.error(`❌ Signature mismatch for ${bodhiOrderId} -- possible fraud attempt`);
         return res.status(400).json({ success: false, message: 'Payment verification failed.' });
     }
 
@@ -275,7 +275,7 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
     });
 });
 
-// ── 8. HEALTH CHECK ──────────────────────────────────────────
+// -- 8. HEALTH CHECK ------------------------------------------------------
 app.get('/health', (req, res) => {
     res.status(200).json({
         status:    'ok',
@@ -290,7 +290,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ── 9. START ─────────────────────────────────────────────────
+// -- 9. START -------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
