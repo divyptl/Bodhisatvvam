@@ -17,6 +17,10 @@ const Razorpay  = require('razorpay');
 
 const app = express();
 
+// Trust Render's proxy — required for express-rate-limit to work correctly
+// Render sits behind a load balancer that sets X-Forwarded-For
+app.set('trust proxy', 1);
+
 // -- 1. ENV SAFETY CHECK -------------------------------------------
 const REQUIRED_ENV = [
     'WHATSAPP_TOKEN',
