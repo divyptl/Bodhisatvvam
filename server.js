@@ -150,17 +150,25 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
             `_Empower Your Life_ 🌸\n` +
             `-- Shree Bodhisatvvam Team`;
 
-        await axios.post(
+        const waResponse = await axios.post(
             `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
             { messaging_product: 'whatsapp', to: phone, type: 'text', text: { body } },
             { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
         );
+        // Log the full Meta response so we can see exactly what happened
         console.log(`✅ WhatsApp sent → ${orderId}`);
+        console.log(`   Meta response status : ${waResponse.status}`);
+        console.log(`   Meta response data   : ${JSON.stringify(waResponse.data)}`);
+        console.log(`   Sent to number       : ${phone}`);
+        console.log(`   Phone Number ID used : ${PHONE_NUMBER_ID}`);
     } catch (err) {
         const code = err?.response?.data?.error?.code    || 'unknown';
         const type = err?.response?.data?.error?.type    || 'unknown';
         const msg  = err?.response?.data?.error?.message || err.message;
         console.error(`❌ WhatsApp error → Code ${code} [${type}]: ${msg}`);
+        console.error(`   Full error response: ${JSON.stringify(err?.response?.data)}`);
+        console.error(`   Attempted to send to: ${phone}`);
+        console.error(`   Phone Number ID: ${PHONE_NUMBER_ID}`);
     }
 }
 
