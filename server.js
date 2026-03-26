@@ -58,14 +58,16 @@ const razorpay = (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://fonts.googleapis.com"],
+            defaultSrc:    ["'self'"],
+            scriptSrc:     ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://cdn.razorpay.com", "https://fonts.googleapis.com"],
+            // helmet defaults script-src-attr to 'none', which blocks ALL onclick= / onevent= HTML attributes.
+            // Must be explicitly set to 'unsafe-inline' to allow inline event handlers.
             scriptSrcAttr: ["'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com"],
-            frameSrc: ["https://api.razorpay.com", "https://checkout.razorpay.com"],
+            styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc:       ["'self'", "https://fonts.gstatic.com"],
+            imgSrc:        ["'self'", "data:", "https:"],
+            connectSrc:    ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://cdn.razorpay.com"],
+            frameSrc:      ["https://api.razorpay.com", "https://checkout.razorpay.com"],
         },
     },
     crossOriginEmbedderPolicy: false, // Needed for Razorpay iframe
@@ -100,7 +102,28 @@ const orderLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// -- 5. HELPERS -----------------------------------------------------------
+// -- 5. PRODUCT CATALOG (server-side source of truth for pricing) ─────────
+// SECURITY: The frontend sends item IDs and quantities. The backend ALWAYS
+// recalculates the total from this catalog. Client-supplied totals/prices are ignored.
+const PRODUCT_CATALOG = {
+  // ─ Salts (all ₹599) ──────────────────────────────────────────────────────
+  101:599,102:599,103:599,104:599,105:599,106:599,107:599,108:599,109:599,110:599,
+  111:599,112:599,113:599,114:599,115:599,116:599,117:599,118:599,119:599,120:599,
+  121:599,122:599,123:599,124:599,125:599,126:599,127:599,128:599,129:599,130:599,
+  131:599,132:599,133:599,134:599,135:599,136:599,137:599,138:599,139:599,140:599,
+  141:599,142:599,143:599,144:599,145:599,146:599,147:599,
+  // ─ Healing Sessions (all ₹2499) ──────────────────────────────────────────
+  201:2499,202:2499,203:2499,204:2499,205:2499,
+  206:2499,207:2499,208:2499,209:2499,210:2499,
+  // ─ Candles (mixed pricing) ───────────────────────────────────────────────
+  301:999, 302:1499,303:1499,304:1499,305:999, 306:1499,307:999, 308:999, 309:999, 310:999,
+  311:1499,312:1499,313:1499,314:1499,315:1499,316:1499,317:1499,318:999, 319:1499,320:1499,
+  321:1499,322:1499,323:4499,324:999, 325:999, 326:1499,327:1499,328:999, 329:1499,330:1499,
+  331:1499,332:1499,333:1499,334:1499,335:1499,336:1499,337:999, 338:999, 339:1499,
+  1000:1799, // Custom Made Candle
+};
+
+// -- 6. HELPERS -----------------------------------------------------------
 function generateOrderId() {
     const ts  = Date.now().toString(36).toUpperCase();
     const rnd = Math.floor(1000 + Math.random() * 9000);
@@ -232,23 +255,41 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
     }
 }
 
-// -- 6. ROUTE: CREATE RAZORPAY ORDER -------------------------------
+// -- 7. ROUTE: CREATE RAZORPAY ORDER -------------------------------
 app.post('/api/create-order', orderLimiter, async (req, res) => {
-    const { name, phone, address, items, total } = req.body;
+    const { name, phone, address, items } = req.body;
 
-    const errors = validateOrderInput({ name, phone, address, items, total });
-    if (errors.length > 0) {
-        return res.status(400).json({ success: false, message: errors.join(' ') });
+    // Validate basic fields (total is intentionally excluded — we calculate it server-side)
+    const errors = validateOrderInput({ name, phone, address, items, total: '₹1' }); // dummy total passes format check
+    if (errors.length > 0 && !errors.every(e => e.includes('total'))) {
+        return res.status(400).json({ success: false, message: errors.filter(e => !e.includes('total')).join(' ') });
     }
+
+    // SECURITY: Recalculate total from server-side catalog — never trust client price
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ success: false, message: 'Order must contain at least one item.' });
+    }
+    let calculatedTotal = 0;
+    for (const item of items) {
+        const catalogPrice = PRODUCT_CATALOG[item.id];
+        if (!catalogPrice) {
+            return res.status(400).json({ success: false, message: `Unknown product ID: ${item.id}` });
+        }
+        const qty = parseInt(item.qty, 10);
+        if (!qty || qty < 1 || qty > 50) {
+            return res.status(400).json({ success: false, message: `Invalid quantity for item ${item.id}.` });
+        }
+        calculatedTotal += catalogPrice * qty;
+    }
+    const amountPaise = Math.round(calculatedTotal * 100);
 
     if (!razorpay) {
         return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
     }
 
     const bodhiOrderId = generateOrderId();
-    const amountPaise  = toPaise(total);
 
-    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${amountPaise / 100}`);
+    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${calculatedTotal} (server-calculated, client sent: ${req.body.total || 'N/A'})`);
 
     try {
         const rzpOrder = await razorpay.orders.create({
@@ -266,12 +307,12 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         console.log(`✅ Razorpay order created → ${rzpOrder.id}`);
 
         return res.status(200).json({
-            success:       true,
+            success:         true,
             razorpayOrderId: rzpOrder.id,
             bodhiOrderId,
-            amount:        amountPaise,
-            currency:      'INR',
-            keyId:         RAZORPAY_KEY_ID,
+            amount:          amountPaise,
+            currency:        'INR',
+            keyId:           RAZORPAY_KEY_ID,
             prefill: {
                 name,
                 contact: normalizeIndianPhone(phone),
@@ -284,7 +325,7 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
     }
 });
 
-// -- 7. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
+// -- 8. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
 app.post('/api/verify-payment', orderLimiter, async (req, res) => {
     const {
         razorpay_order_id,
@@ -348,7 +389,7 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
     });
 });
 
-// -- 8. HEALTH CHECK ------------------------------------------------------
+// -- 9. HEALTH CHECK ------------------------------------------------------
 app.get('/health', (req, res) => {
     res.status(200).json({
         status:    'ok',
@@ -363,7 +404,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// -- 9. START -------------------------------------------------------------
+// -- 10. START -------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌸 Bodhisatvvam server v4 running on port ${PORT}`);
