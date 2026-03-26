@@ -534,11 +534,11 @@ nav.scrolled {
 .product-card {
   background: white; position: relative;
   transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
-  overflow: hidden;
+  /* overflow:hidden removed — it was clipping .card-actions translateY(100%) making Add to Cart unreachable */
 }
 .product-card:hover { transform: translateY(-8px); z-index: 10; }
 .product-card:hover .product-img-overlay { opacity: 1; }
-.product-card:hover .card-actions { transform: translateY(0); }
+.product-card:hover .card-actions { transform: translateY(0); pointer-events: auto; }
 
 .product-img-wrap {
   height: 260px; position: relative; overflow: hidden;
@@ -561,18 +561,31 @@ nav.scrolled {
 .product-badge.new { background: var(--terracotta); }
 
 .card-actions {
-  position: absolute; bottom: 0; left: 0; right: 0;
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 5;
   background: var(--forest); padding: 14px 20px;
   display: flex; gap: 8px;
   transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+  pointer-events: none; /* hidden by default — enabled on hover */
 }
 .quick-add {
   flex: 1; background: var(--amber); color: white;
   border: none; padding: 10px; font-family: 'Jost', sans-serif;
   font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
-  font-weight: 500; transition: background 0.2s;
+  font-weight: 500; transition: background 0.2s; cursor: pointer;
 }
 .quick-add:hover { background: var(--amber-light); }
+
+/* Always-visible Add to Cart button — primary CTA, works on all devices */
+.product-add-btn {
+  display: block; width: 100%; margin-top: 16px;
+  background: var(--forest); color: var(--cream);
+  border: none; padding: 11px 16px; font-family: 'Jost', sans-serif;
+  font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase;
+  font-weight: 600; cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.product-add-btn:hover { background: var(--forest-light); transform: translateY(-1px); }
+.product-add-btn:active { transform: translateY(0); }
 
 .product-info { padding: 24px; border-top: 1px solid var(--cream-dark); }
 .product-category {
@@ -1597,9 +1610,9 @@ function renderProducts(filter, resetPage) {
         <span class="product-emoji">${p.emoji}</span>
         <div class="product-img-overlay"></div>
         ${p.badge ? `<div class="product-badge ${p.badge}">${p.badge === 'bestseller' ? 'Bestseller' : p.badge === 'custom' ? 'Custom' : 'New'}</div>` : ''}
-        <div class="card-actions">
-          <button class="quick-add" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '+ Book Session' : '+ Add to Cart'}</button>
-        </div>
+      </div>
+      <div class="card-actions">
+        <button class="quick-add" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '+ Book Session' : '+ Add to Cart'}</button>
       </div>
       <div class="product-info">
         <div class="product-category">${p.category === 'salts' ? 'Energy Salts' : p.category === 'candles' ? 'Infused Candles' : 'Personal Healing'}</div>
@@ -1609,6 +1622,7 @@ function renderProducts(filter, resetPage) {
           <div class="product-price">₹${p.price.toFixed(2)}</div>
           <div class="star-rating">${'★'.repeat(p.rating)}</div>
         </div>
+        <button class="product-add-btn" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '🌿 Book Session' : '🛒 Add to Cart'}</button>
       </div>
     </div>
   `).join('');
@@ -1618,6 +1632,7 @@ function renderProducts(filter, resetPage) {
   if (wrap) wrap.style.display = visibleCount >= filtered.length ? 'none' : 'block';
 
   observeAnimations();
+  setTimeout(attachCursorHovers, 100);
 }
 
 function loadMore() {
@@ -1626,10 +1641,15 @@ function loadMore() {
 }
 
 function filterProducts(filter, btn) {
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('searchBar').value = '';
-  renderProducts(filter, true);
+  try {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const sb = document.getElementById('searchBar');
+    if (sb) { sb.value = ''; clearSearchDebounce(); }
+    renderProducts(filter, true);
+  } catch (e) {
+    console.error('filterProducts error:', e);
+  }
 }
 
 // ── SEARCH ──────────────────────────────────────────────────
@@ -1653,9 +1673,10 @@ function searchProducts() {
       <div class="product-img-wrap">
         <span class="product-emoji">${p.emoji}</span>
         <div class="product-img-overlay"></div>
-        <div class="card-actions">
-          <button class="quick-add" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '+ Book Session' : '+ Add to Cart'}</button>
-        </div>
+        ${p.badge ? `<div class="product-badge ${p.badge}">${p.badge === 'bestseller' ? 'Bestseller' : p.badge === 'custom' ? 'Custom' : 'New'}</div>` : ''}
+      </div>
+      <div class="card-actions">
+        <button class="quick-add" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '+ Book Session' : '+ Add to Cart'}</button>
       </div>
       <div class="product-info">
         <div class="product-category">${p.category === 'salts' ? 'Energy Salts' : p.category === 'candles' ? 'Infused Candles' : 'Personal Healing'}</div>
@@ -1665,6 +1686,7 @@ function searchProducts() {
           <div class="product-price">₹${p.price.toFixed(2)}</div>
           <div class="star-rating">${'★'.repeat(p.rating)}</div>
         </div>
+        <button class="product-add-btn" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '🌿 Book Session' : '🛒 Add to Cart'}</button>
       </div>
     </div>
   `).join('');
@@ -2004,22 +2026,28 @@ function toggleMobileNav() {
 }
 
 // ── CUSTOM CURSOR (desktop only) ────────────────────────────
-if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-  const cursor = document.getElementById('cursor');
-  const ring = document.getElementById('cursorRing');
-  document.addEventListener('mousemove', e => {
-    cursor.style.left = e.clientX + 'px';
-    cursor.style.top = e.clientY + 'px';
-    setTimeout(() => {
-      ring.style.left = e.clientX + 'px';
-      ring.style.top = e.clientY + 'px';
-    }, 80);
+let _cursor = null;
+let _ring = null;
+
+function attachCursorHovers() {
+  if (!_cursor || !_ring) return;
+  document.querySelectorAll('a, button, .product-card, .filter-tab, .pillar').forEach(el => {
+    el.addEventListener('mouseenter', () => { _cursor.classList.add('hover'); _ring.classList.add('hover'); });
+    el.addEventListener('mouseleave', () => { _cursor.classList.remove('hover'); _ring.classList.remove('hover'); });
   });
-  // Defer hover listeners until after products render
-  function attachCursorHovers() {
-    document.querySelectorAll('a, button, .product-card, .filter-tab, .pillar').forEach(el => {
-      el.addEventListener('mouseenter', () => { cursor.classList.add('hover'); ring.classList.add('hover'); });
-      el.addEventListener('mouseleave', () => { cursor.classList.remove('hover'); ring.classList.remove('hover'); });
+}
+
+if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  _cursor = document.getElementById('cursor');
+  _ring = document.getElementById('cursorRing');
+  if (_cursor && _ring) {
+    document.addEventListener('mousemove', e => {
+      _cursor.style.left = e.clientX + 'px';
+      _cursor.style.top = e.clientY + 'px';
+      setTimeout(() => {
+        _ring.style.left = e.clientX + 'px';
+        _ring.style.top = e.clientY + 'px';
+      }, 80);
     });
   }
 }
@@ -2064,20 +2092,20 @@ function observeAnimations() {
 })();
 
 // ── INIT ────────────────────────────────────────────────────
+let _searchDebounce;
+function clearSearchDebounce() { clearTimeout(_searchDebounce); }
+
 document.addEventListener('DOMContentLoaded', () => {
   const searchBar = document.getElementById('searchBar');
   if (searchBar) {
-    let debounceTimer;
     searchBar.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(searchProducts, 200);
+      clearSearchDebounce();
+      _searchDebounce = setTimeout(searchProducts, 200);
     });
   }
   renderProducts('all', true);
   observeAnimations();
-  if (typeof attachCursorHovers === 'function') {
-    setTimeout(attachCursorHovers, 500);
-  }
+  setTimeout(attachCursorHovers, 500);
 });
 </script>
 
