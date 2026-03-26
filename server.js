@@ -36,7 +36,7 @@ const WHATSAPP_TOKEN       = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID      = process.env.PHONE_NUMBER_ID;
 const GOOGLE_SCRIPT_URL    = process.env.GOOGLE_SCRIPT_URL;
 const GOOGLE_SCRIPT_SECRET = process.env.GOOGLE_SCRIPT_SECRET;
-const ALLOWED_ORIGIN       = process.env.ALLOWED_ORIGIN || '*';
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 const RAZORPAY_KEY_ID      = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET  = process.env.RAZORPAY_KEY_SECRET;
 
@@ -68,10 +68,16 @@ const allowedOrigins = ALLOWED_ORIGIN === '*'
 
 app.use(cors({
     origin: (origin, callback) => {
+        // No origin = same-origin request (static file served by this same Express app)
         if (!origin) return callback(null, true);
+        // Wildcard allows everything
         if (allowedOrigins.includes('*')) return callback(null, true);
-        if (allowedOrigins.includes(origin)) return callback(null, origin);
-        callback(new Error('CORS blocked: ' + origin));
+        // Explicit allow-list match
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        // FIX: was throwing new Error() which crashed into the unhandled error handler
+        // and returned an HTML 500. Now returns a proper CORS rejection instead.
+        console.warn(`⚠️  CORS rejected origin: ${origin}`);
+        return callback(null, false);
     },
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
