@@ -1,24 +1,27 @@
 // ═══════════════════════════════════════════════════════════
-//  Bodhisatvvam -- Backend Server v3 (Razorpay Integration)
-//  New in this version:
-//    ✅ POST /api/create-order  -- creates Razorpay order, returns order_id + key
-//    ✅ POST /api/verify-payment -- verifies signature, then logs to Sheet + WhatsApp
-//    ✅ Razorpay signature verification (HMAC-SHA256) -- prevents fake payment claims
-//    ✅ All previous hardening retained (CORS, rate limit, validation, sanitized logs)
+//  Bodhisatvvam -- Backend Server v4 (All Fixes Applied)
+//
+//  Changes from v3:
+//    ✅ helmet.js for security headers (CSP, X-Frame-Options, etc.)
+//    ✅ Phone normalization — ensures 91 prefix for WhatsApp API
+//    ✅ Custom candle notes preserved in order items
+//    ✅ Fallback order logging — if Sheet + WhatsApp both fail, stdout captures full payload
+//    ✅ Improved error messages and edge-case handling
+//    ✅ All previous hardening retained
 // ═══════════════════════════════════════════════════════════
 
 const express   = require('express');
 const axios     = require('axios');
 const path      = require('path');
 const cors      = require('cors');
-const crypto    = require('crypto'); // Built-in Node.js -- no install needed
+const crypto    = require('crypto');
 const rateLimit = require('express-rate-limit');
+const helmet    = require('helmet');
 const Razorpay  = require('razorpay');
 
 const app = express();
 
-// Trust Render's proxy — required for express-rate-limit to work correctly
-// Render sits behind a load balancer that sets X-Forwarded-For
+// Trust Render's proxy
 app.set('trust proxy', 1);
 
 // -- 1. ENV SAFETY CHECK -------------------------------------------
@@ -51,7 +54,23 @@ const razorpay = (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET)
     : null;
 
 // -- 3. MIDDLEWARE --------------------------------------------------------
-// Supports single origin, comma-separated list, or * wildcard
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://fonts.googleapis.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com"],
+            frameSrc: ["https://api.razorpay.com", "https://checkout.razorpay.com"],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Needed for Razorpay iframe
+}));
+
+// CORS
 const allowedOrigins = ALLOWED_ORIGIN === '*'
     ? ['*']
     : ALLOWED_ORIGIN.split(',').map(o => o.trim());
@@ -67,13 +86,14 @@ app.use(cors({
     allowedHeaders: ['Content-Type'],
     credentials: false,
 }));
+
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // -- 4. RATE LIMITERS -----------------------------------------------------
 const orderLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10, // slightly higher since create + verify = 2 calls per order
+    max: 10,
     message: { success: false, message: 'Too many requests. Please wait 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -92,14 +112,29 @@ function validatePhone(phone) {
     return digits.length >= 10 && digits.length <= 13;
 }
 
+/**
+ * Normalizes an Indian phone number to include the 91 country code.
+ * "9737171090"   → "919737171090"
+ * "919737171090" → "919737171090"
+ * "+919737171090"→ "919737171090"
+ */
+function normalizeIndianPhone(phone) {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 10) return '91' + digits;
+    if (digits.length === 12 && digits.startsWith('91')) return digits;
+    if (digits.length === 13 && digits.startsWith('091')) return digits.slice(1);
+    // Fallback: return as-is (the WhatsApp API will reject if invalid)
+    return digits;
+}
+
 function validateOrderInput({ name, phone, address, items, total }) {
     const errors = [];
     if (!name || typeof name !== 'string' || name.trim().length < 2)
         errors.push('Name must be at least 2 characters.');
     if (!validatePhone(phone))
         errors.push('Please provide a valid 10-digit phone number.');
-    if (!address || typeof address !== 'string' || address.trim().length < 10)
-        errors.push('Address must be at least 10 characters.');
+    if (!address || typeof address !== 'string' || address.trim().length < 5)
+        errors.push('Address must be at least 5 characters.');
     if (!items || (Array.isArray(items) && items.length === 0))
         errors.push('Order must contain at least one item.');
     const parsedTotal = parseFloat(String(total).replace(/[^0-9.]/g, ''));
@@ -110,23 +145,42 @@ function validateOrderInput({ name, phone, address, items, total }) {
 
 function formatItemsForWhatsApp(items) {
     if (Array.isArray(items)) {
-        return items.map(i => `- ${i.name} x${i.qty} @ Rs.${i.price}`).join('\n');
+        return items.map(i => {
+            let line = `- ${i.name} x${i.qty} @ Rs.${i.price}`;
+            if (i.notes) line += `\n  _Note: ${i.notes}_`;
+            return line;
+        }).join('\n');
     }
     return String(items);
 }
 
-// Converts "₹1,599.00" or 1599 → integer paise (Razorpay uses paise)
+function formatItemsForSheet(items) {
+    if (Array.isArray(items)) {
+        return items.map(i => {
+            let str = `${i.name} (x${i.qty})`;
+            if (i.notes) str += ` [${i.notes}]`;
+            return str;
+        }).join(', ');
+    }
+    return String(items);
+}
+
 function toPaise(total) {
     const num = parseFloat(String(total).replace(/[^0-9.]/g, ''));
-    return Math.round(num * 100); // ₹599.00 → 59900 paise
+    return Math.round(num * 100);
 }
 
 async function pushToSheet(payload, attempt = 1) {
     if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_SECRET) return false;
     try {
+        // Format items as string for the sheet
+        const sheetPayload = {
+            ...payload,
+            items: formatItemsForSheet(payload.items),
+        };
         await axios.post(
             GOOGLE_SCRIPT_URL,
-            { secret: GOOGLE_SCRIPT_SECRET, ...payload },
+            { secret: GOOGLE_SCRIPT_SECRET, ...sheetPayload },
             { headers: { 'Content-Type': 'application/json' }, timeout: 25000 }
         );
         console.log(`✅ Sheet updated → ${payload.orderId}`);
@@ -134,7 +188,6 @@ async function pushToSheet(payload, attempt = 1) {
     } catch (err) {
         const status = err?.response?.status || 'no-response';
         console.error(`❌ Sheet error (attempt ${attempt}) → HTTP ${status}: ${err.message}`);
-        // Retry once after 3 seconds if it timed out
         if (attempt === 1 && err.code === 'ECONNABORTED') {
             console.log(`   Retrying sheet update in 3s...`);
             await new Promise(r => setTimeout(r, 3000));
@@ -145,7 +198,7 @@ async function pushToSheet(payload, attempt = 1) {
 }
 
 async function sendWhatsApp(name, phone, orderId, items, total, address) {
-    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return;
+    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return false;
     try {
         const body =
             `*Namaste ${name},* 🙏\n\n` +
@@ -165,26 +218,20 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
             { messaging_product: 'whatsapp', to: phone, type: 'text', text: { body } },
             { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
         );
-        // Log the full Meta response so we can see exactly what happened
-        console.log(`✅ WhatsApp sent → ${orderId}`);
-        console.log(`   Meta response status : ${waResponse.status}`);
-        console.log(`   Meta response data   : ${JSON.stringify(waResponse.data)}`);
-        console.log(`   Sent to number       : ${phone}`);
-        console.log(`   Phone Number ID used : ${PHONE_NUMBER_ID}`);
+        console.log(`✅ WhatsApp sent → ${orderId} (to: ${phone})`);
+        console.log(`   Meta response: ${waResponse.status} ${JSON.stringify(waResponse.data)}`);
+        return true;
     } catch (err) {
         const code = err?.response?.data?.error?.code    || 'unknown';
         const type = err?.response?.data?.error?.type    || 'unknown';
         const msg  = err?.response?.data?.error?.message || err.message;
         console.error(`❌ WhatsApp error → Code ${code} [${type}]: ${msg}`);
-        console.error(`   Full error response: ${JSON.stringify(err?.response?.data)}`);
         console.error(`   Attempted to send to: ${phone}`);
-        console.error(`   Phone Number ID: ${PHONE_NUMBER_ID}`);
+        return false;
     }
 }
 
 // -- 6. ROUTE: CREATE RAZORPAY ORDER -------------------------------
-// Called when customer clicks "Pay Now" -- before payment happens.
-// Creates a Razorpay order and returns the order_id to the frontend.
 app.post('/api/create-order', orderLimiter, async (req, res) => {
     const { name, phone, address, items, total } = req.body;
 
@@ -197,7 +244,7 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
     }
 
-    const bodhiOrderId = generateOrderId(); // Our internal ID
+    const bodhiOrderId = generateOrderId();
     const amountPaise  = toPaise(total);
 
     console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${amountPaise / 100}`);
@@ -206,10 +253,10 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         const rzpOrder = await razorpay.orders.create({
             amount:   amountPaise,
             currency: 'INR',
-            receipt:  bodhiOrderId, // Links Razorpay order to our ID
+            receipt:  bodhiOrderId,
             notes: {
                 customer_name:    name,
-                customer_phone:   phone.replace(/\D/g, ''),
+                customer_phone:   normalizeIndianPhone(phone),
                 delivery_address: address,
                 bdh_order_id:     bodhiOrderId,
             },
@@ -217,17 +264,16 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
 
         console.log(`✅ Razorpay order created → ${rzpOrder.id}`);
 
-        // Return everything the frontend Razorpay SDK needs
         return res.status(200).json({
             success:       true,
-            razorpayOrderId: rzpOrder.id,     // rzp_order_xxx -- used by the JS SDK
-            bodhiOrderId,                      // #BDH-xxx -- shown to customer
+            razorpayOrderId: rzpOrder.id,
+            bodhiOrderId,
             amount:        amountPaise,
             currency:      'INR',
-            keyId:         RAZORPAY_KEY_ID,   // Public key -- safe to send to frontend
+            keyId:         RAZORPAY_KEY_ID,
             prefill: {
                 name,
-                contact: phone.replace(/\D/g, ''),
+                contact: normalizeIndianPhone(phone),
             },
         });
 
@@ -238,14 +284,11 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
 });
 
 // -- 7. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
-// Called AFTER Razorpay payment succeeds on the frontend.
-// Verifies the HMAC signature (proves payment is real), then logs + notifies.
 app.post('/api/verify-payment', orderLimiter, async (req, res) => {
     const {
         razorpay_order_id,
         razorpay_payment_id,
         razorpay_signature,
-        // Order details (sent again so we can log them)
         bodhiOrderId,
         name,
         phone,
@@ -255,7 +298,6 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
     } = req.body;
 
     // 7a. Verify Razorpay HMAC signature
-    // This is the critical security step -- without it anyone could fake a payment
     const expectedSignature = crypto
         .createHmac('sha256', RAZORPAY_KEY_SECRET)
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -268,24 +310,36 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
 
     console.log(`✅ Payment verified → ${bodhiOrderId} | Razorpay: ${razorpay_payment_id}`);
 
-    const sanitizedPhone = phone.replace(/\D/g, '');
+    const sanitizedPhone = normalizeIndianPhone(phone);
 
-    // 7b. Log to Google Sheet (status = "Paid")
-    await pushToSheet({
+    // 7b. Log to Google Sheet
+    const sheetOk = await pushToSheet({
         orderId: bodhiOrderId,
         name,
         phone:   sanitizedPhone,
         address,
         items,
         total,
-        status:  'Paid', // Override default "New Order" since payment is confirmed
+        status:  'Paid',
         paymentId: razorpay_payment_id,
     });
 
     // 7c. Send WhatsApp confirmation
-    await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address);
+    const waOk = await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address);
 
-    // 7d. Return success to frontend
+    // 7d. SAFETY NET — if both failed, log full payload to stdout
+    //     so Render's log retention captures the order
+    if (!sheetOk && !waOk) {
+        console.error(`🚨 CRITICAL: Both Sheet and WhatsApp failed for order ${bodhiOrderId}`);
+        console.error(`🚨 FULL ORDER DATA (backup): ${JSON.stringify({
+            orderId: bodhiOrderId,
+            paymentId: razorpay_payment_id,
+            name, phone: sanitizedPhone, address, items, total,
+            timestamp: new Date().toISOString(),
+        })}`);
+    }
+
+    // 7e. Return success to frontend (payment IS confirmed regardless of notifications)
     return res.status(200).json({
         success: true,
         orderId: bodhiOrderId,
@@ -297,7 +351,7 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
 app.get('/health', (req, res) => {
     res.status(200).json({
         status:    'ok',
-        service:   'Bodhisatvvam Backend',
+        service:   'Bodhisatvvam Backend v4',
         timestamp: new Date().toISOString(),
         env: {
             whatsapp:    !!WHATSAPP_TOKEN,
@@ -311,9 +365,10 @@ app.get('/health', (req, res) => {
 // -- 9. START -------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
+    console.log(`🌸 Bodhisatvvam server v4 running on port ${PORT}`);
     console.log(`   Razorpay  : ${razorpay    ? '✅ configured' : '❌ not set'}`);
     console.log(`   WhatsApp  : ${WHATSAPP_TOKEN ? '✅ configured' : '❌ not set'}`);
     console.log(`   Sheet     : ${GOOGLE_SCRIPT_URL ? '✅ configured' : '❌ not set'}`);
+    console.log(`   Helmet    : ✅ enabled`);
     console.log(`   CORS      : ${ALLOWED_ORIGIN}`);
 });
