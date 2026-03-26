@@ -47,7 +47,7 @@ app.use(helmet({
             styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.razorpay.com"],
             fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://*.razorpay.com"],
             imgSrc:        ["'self'", "data:", "https:"],
-            connectSrc:    ["'self'", "https://*.razorpay.com"],
+            connectSrc:    ["'self'", "https://*.razorpay.com", "https://bodhisatvvam.onrender.com"],
             frameSrc:      ["'self'", "https://*.razorpay.com", "https:"],
         },
     },
