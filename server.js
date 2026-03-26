@@ -50,13 +50,15 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc:    ["'self'"],
-            scriptSrc:     ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://cdn.razorpay.com", "https://fonts.googleapis.com"],
+            scriptSrc:     ["'self'", "'unsafe-inline'", "https://*.razorpay.com", "https://fonts.googleapis.com"],
             scriptSrcAttr: ["'unsafe-inline'"],   // FIX: was 'none', blocked all onclick= attributes
-            styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            fontSrc:       ["'self'", "https://fonts.gstatic.com"],
+            styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.razorpay.com"],
+            fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://*.razorpay.com"],
             imgSrc:        ["'self'", "data:", "https:"],
-            connectSrc:    ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://cdn.razorpay.com"],
-            frameSrc:      ["https://api.razorpay.com", "https://checkout.razorpay.com"],
+            // Wildcard covers api, cdn, lumberjack, and all internal Razorpay service calls
+            connectSrc:    ["'self'", "https://*.razorpay.com"],
+            // Wildcard covers 3DS bank iframes loaded dynamically during card verification
+            frameSrc:      ["'self'", "https://*.razorpay.com"],
         },
     },
     crossOriginEmbedderPolicy: false,
@@ -351,7 +353,11 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
     return res.status(500).json({ success: false, message: 'An unexpected server error occurred. Please try again.' });
 });
 
-// ── 10. HEALTH CHECK ─────────────────────────────────────────────────────────
+// ── 10. PING (wake-up endpoint for Render cold-start) ────────────────────────
+// Frontend calls this when checkout opens so the server is warm before Pay Now is clicked
+app.get('/api/ping', (req, res) => res.status(200).json({ ok: true }));
+
+// ── 11. HEALTH CHECK ─────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
     res.status(200).json({
         status:    'ok',
@@ -366,7 +372,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ── 11. START ─────────────────────────────────────────────────────────────────
+// ── 12. START ─────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌸 Bodhisatvvam server v5 running on port ${PORT}`);
