@@ -48,10 +48,11 @@ app.use(helmet({
             fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://*.razorpay.com"],
             imgSrc:        ["'self'", "data:", "https:"],
             connectSrc:    ["'self'", "https://*.razorpay.com"],
-            frameSrc:      ["'self'", "https://*.razorpay.com"],
+            frameSrc:      ["'self'", "https://*.razorpay.com", "https:"],
         },
     },
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
 }));
 
 const allowedOrigins = ALLOWED_ORIGIN === '*' ? ['*'] : ALLOWED_ORIGIN.split(',').map(o => o.trim());
