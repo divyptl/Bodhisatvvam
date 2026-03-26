@@ -257,49 +257,60 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
 
 // -- 7. ROUTE: CREATE RAZORPAY ORDER -------------------------------
 app.post('/api/create-order', orderLimiter, async (req, res) => {
-    const { name, phone, address, items } = req.body;
-
-    // Validate basic fields (total is intentionally excluded — we calculate it server-side)
-    const errors = validateOrderInput({ name, phone, address, items, total: '₹1' }); // dummy total passes format check
-    if (errors.length > 0 && !errors.every(e => e.includes('total'))) {
-        return res.status(400).json({ success: false, message: errors.filter(e => !e.includes('total')).join(' ') });
-    }
-
-    // SECURITY: Recalculate total from server-side catalog — never trust client price
-    if (!Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ success: false, message: 'Order must contain at least one item.' });
-    }
-    let calculatedTotal = 0;
-    for (const item of items) {
-        const catalogPrice = PRODUCT_CATALOG[item.id];
-        if (!catalogPrice) {
-            return res.status(400).json({ success: false, message: `Unknown product ID: ${item.id}` });
-        }
-        const qty = parseInt(item.qty, 10);
-        if (!qty || qty < 1 || qty > 50) {
-            return res.status(400).json({ success: false, message: `Invalid quantity for item ${item.id}.` });
-        }
-        calculatedTotal += catalogPrice * qty;
-    }
-    const amountPaise = Math.round(calculatedTotal * 100);
-
-    if (!razorpay) {
-        return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
-    }
-
-    const bodhiOrderId = generateOrderId();
-
-    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${calculatedTotal} (server-calculated, client sent: ${req.body.total || 'N/A'})`);
-
     try {
+        const body = req.body || {};
+        const { name, phone, address, items } = body;
+
+        // Basic field validation
+        if (!name || typeof name !== 'string' || name.trim().length < 2) {
+            return res.status(400).json({ success: false, message: 'Name must be at least 2 characters.' });
+        }
+        if (!phone || typeof phone !== 'string') {
+            return res.status(400).json({ success: false, message: 'Please provide a valid phone number.' });
+        }
+        const phoneDigits = phone.replace(/\D/g, '');
+        if (phoneDigits.length < 10 || phoneDigits.length > 13) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid 10-digit phone number.' });
+        }
+        if (!address || typeof address !== 'string' || address.trim().length < 5) {
+            return res.status(400).json({ success: false, message: 'Address must be at least 5 characters.' });
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'Order must contain at least one item.' });
+        }
+
+        // SECURITY: Recalculate total server-side from catalog — never trust client price
+        let calculatedTotal = 0;
+        for (const item of items) {
+            const catalogPrice = PRODUCT_CATALOG[item.id];
+            if (!catalogPrice) {
+                return res.status(400).json({ success: false, message: `Unknown product ID: ${item.id}. Please refresh and try again.` });
+            }
+            const qty = parseInt(item.qty, 10);
+            if (!qty || qty < 1 || qty > 50) {
+                return res.status(400).json({ success: false, message: `Invalid quantity for item ${item.id}.` });
+            }
+            calculatedTotal += catalogPrice * qty;
+        }
+        const amountPaise = Math.round(calculatedTotal * 100);
+
+        if (!razorpay) {
+            return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
+        }
+
+        const bodhiOrderId  = generateOrderId();
+        const sanitizedPhone = normalizeIndianPhone(phone);
+
+        console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${calculatedTotal} (server-calculated)`);
+
         const rzpOrder = await razorpay.orders.create({
             amount:   amountPaise,
             currency: 'INR',
             receipt:  bodhiOrderId,
             notes: {
-                customer_name:    name,
-                customer_phone:   normalizeIndianPhone(phone),
-                delivery_address: address,
+                customer_name:    name.trim(),
+                customer_phone:   sanitizedPhone,
+                delivery_address: address.trim(),
                 bdh_order_id:     bodhiOrderId,
             },
         });
@@ -314,86 +325,111 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
             currency:        'INR',
             keyId:           RAZORPAY_KEY_ID,
             prefill: {
-                name,
-                contact: normalizeIndianPhone(phone),
+                name:    name.trim(),
+                contact: sanitizedPhone,
             },
         });
 
     } catch (err) {
-        console.error(`❌ Razorpay order creation failed: ${err.message}`);
-        return res.status(500).json({ success: false, message: 'Could not initiate payment. Please try again.' });
+        console.error(`❌ /api/create-order error: ${err.message}`);
+        return res.status(500).json({ success: false, message: 'Could not initiate payment. Please try again or contact us on WhatsApp.' });
     }
 });
 
 // -- 8. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
 app.post('/api/verify-payment', orderLimiter, async (req, res) => {
-    const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        bodhiOrderId,
-        name,
-        phone,
-        address,
-        items,
-        total,
-    } = req.body;
+    try {
+        const body = req.body || {};
+        const {
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            bodhiOrderId,
+            name,
+            phone,
+            address,
+            items,
+            total,
+        } = body;
 
-    // 7a. Verify Razorpay HMAC signature
-    const expectedSignature = crypto
-        .createHmac('sha256', RAZORPAY_KEY_SECRET)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-        .digest('hex');
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ success: false, message: 'Missing payment verification fields.' });
+        }
 
-    if (expectedSignature !== razorpay_signature) {
-        console.error(`❌ Signature mismatch for ${bodhiOrderId} -- possible fraud attempt`);
-        return res.status(400).json({ success: false, message: 'Payment verification failed.' });
-    }
+        // Verify Razorpay HMAC signature
+        const expectedSignature = crypto
+            .createHmac('sha256', RAZORPAY_KEY_SECRET)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest('hex');
 
-    console.log(`✅ Payment verified → ${bodhiOrderId} | Razorpay: ${razorpay_payment_id}`);
+        if (expectedSignature !== razorpay_signature) {
+            console.error(`❌ Signature mismatch for ${bodhiOrderId} -- possible fraud attempt`);
+            return res.status(400).json({ success: false, message: 'Payment verification failed.' });
+        }
 
-    const sanitizedPhone = normalizeIndianPhone(phone);
+        console.log(`✅ Payment verified → ${bodhiOrderId} | Razorpay: ${razorpay_payment_id}`);
 
-    // 7b. Log to Google Sheet
-    const sheetOk = await pushToSheet({
-        orderId: bodhiOrderId,
-        name,
-        phone:   sanitizedPhone,
-        address,
-        items,
-        total,
-        status:  'Paid',
-        paymentId: razorpay_payment_id,
-    });
+        const sanitizedPhone = normalizeIndianPhone(phone || '');
 
-    // 7c. Send WhatsApp confirmation
-    const waOk = await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address);
-
-    // 7d. SAFETY NET — if both failed, log full payload to stdout
-    //     so Render's log retention captures the order
-    if (!sheetOk && !waOk) {
-        console.error(`🚨 CRITICAL: Both Sheet and WhatsApp failed for order ${bodhiOrderId}`);
-        console.error(`🚨 FULL ORDER DATA (backup): ${JSON.stringify({
+        // Log to Google Sheet
+        const sheetOk = await pushToSheet({
             orderId: bodhiOrderId,
+            name,
+            phone:   sanitizedPhone,
+            address,
+            items,
+            total,
+            status:  'Paid',
             paymentId: razorpay_payment_id,
-            name, phone: sanitizedPhone, address, items, total,
-            timestamp: new Date().toISOString(),
-        })}`);
-    }
+        });
 
-    // 7e. Return success to frontend (payment IS confirmed regardless of notifications)
-    return res.status(200).json({
-        success: true,
-        orderId: bodhiOrderId,
-        message: 'Payment confirmed! Order placed successfully.',
-    });
+        // Send WhatsApp confirmation
+        const waOk = await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address);
+
+        // SAFETY NET — if both failed, log full payload to stdout
+        if (!sheetOk && !waOk) {
+            console.error(`🚨 CRITICAL: Both Sheet and WhatsApp failed for order ${bodhiOrderId}`);
+            console.error(`🚨 FULL ORDER DATA (backup): ${JSON.stringify({
+                orderId: bodhiOrderId,
+                paymentId: razorpay_payment_id,
+                name, phone: sanitizedPhone, address, items, total,
+                timestamp: new Date().toISOString(),
+            })}`);
+        }
+
+        // Return success regardless of notification status — payment IS confirmed
+        return res.status(200).json({
+            success: true,
+            orderId: bodhiOrderId,
+            message: 'Payment confirmed! Order placed successfully.',
+        });
+
+    } catch (err) {
+        console.error(`❌ /api/verify-payment error: ${err.message}`);
+        return res.status(500).json({ success: false, message: 'Payment received but confirmation failed. Please WhatsApp us with your payment reference.' });
+    }
 });
 
-// -- 9. HEALTH CHECK ------------------------------------------------------
+// -- 9. GLOBAL ERROR HANDLERS ─────────────────────────────────────────────
+// Catches body-parse errors (malformed JSON in request) — returns JSON not HTML
+app.use((err, req, res, next) => {
+    if (err.type === 'entity.parse.failed') {
+        return res.status(400).json({ success: false, message: 'Invalid request body.' });
+    }
+    next(err);
+});
+
+// Catch-all error handler — ensures ALL unhandled errors return JSON, never HTML
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+    console.error(`❌ Unhandled error on ${req.method} ${req.path}: ${err.message}`);
+    return res.status(500).json({ success: false, message: 'An unexpected server error occurred. Please try again.' });
+});
+
+// -- 10. HEALTH CHECK ------------------------------------------------------
 app.get('/health', (req, res) => {
     res.status(200).json({
         status:    'ok',
-        service:   'Bodhisatvvam Backend v4',
+        service:   'Bodhisatvvam Backend v5',
         timestamp: new Date().toISOString(),
         env: {
             whatsapp:    !!WHATSAPP_TOKEN,
