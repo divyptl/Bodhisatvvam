@@ -532,13 +532,11 @@ nav.scrolled {
 }
 
 .product-card {
-  background: white; position: relative;
+  background: white; position: relative; overflow: hidden;
   transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
-  /* overflow:hidden removed — it was clipping .card-actions translateY(100%) making Add to Cart unreachable */
 }
 .product-card:hover { transform: translateY(-8px); z-index: 10; }
 .product-card:hover .product-img-overlay { opacity: 1; }
-.product-card:hover .card-actions { transform: translateY(0); pointer-events: auto; }
 
 .product-img-wrap {
   height: 260px; position: relative; overflow: hidden;
@@ -560,32 +558,17 @@ nav.scrolled {
 .product-badge.bestseller { background: var(--forest); }
 .product-badge.new { background: var(--terracotta); }
 
-.card-actions {
-  position: absolute; bottom: 0; left: 0; right: 0; z-index: 5;
-  background: var(--forest); padding: 14px 20px;
-  display: flex; gap: 8px;
-  transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
-  pointer-events: none; /* hidden by default — enabled on hover */
-}
-.quick-add {
-  flex: 1; background: var(--amber); color: white;
-  border: none; padding: 10px; font-family: 'Jost', sans-serif;
-  font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
-  font-weight: 500; transition: background 0.2s; cursor: pointer;
-}
-.quick-add:hover { background: var(--amber-light); }
-
 /* Always-visible Add to Cart button — primary CTA, works on all devices */
 .product-add-btn {
   display: block; width: 100%; margin-top: 16px;
   background: var(--forest); color: var(--cream);
-  border: none; padding: 11px 16px; font-family: 'Jost', sans-serif;
+  border: none; padding: 12px 16px; font-family: 'Jost', sans-serif;
   font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase;
   font-weight: 600; cursor: pointer;
   transition: background 0.2s, transform 0.15s;
 }
-.product-add-btn:hover { background: var(--forest-light); transform: translateY(-1px); }
-.product-add-btn:active { transform: translateY(0); }
+.product-add-btn:hover { background: var(--forest-light); }
+.product-add-btn:active { transform: scale(0.98); }
 
 .product-info { padding: 24px; border-top: 1px solid var(--cream-dark); }
 .product-category {
@@ -1611,9 +1594,6 @@ function renderProducts(filter, resetPage) {
         <div class="product-img-overlay"></div>
         ${p.badge ? `<div class="product-badge ${p.badge}">${p.badge === 'bestseller' ? 'Bestseller' : p.badge === 'custom' ? 'Custom' : 'New'}</div>` : ''}
       </div>
-      <div class="card-actions">
-        <button class="quick-add" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '+ Book Session' : '+ Add to Cart'}</button>
-      </div>
       <div class="product-info">
         <div class="product-category">${p.category === 'salts' ? 'Energy Salts' : p.category === 'candles' ? 'Infused Candles' : 'Personal Healing'}</div>
         <div class="product-name">${p.name}</div>
@@ -1636,8 +1616,13 @@ function renderProducts(filter, resetPage) {
 }
 
 function loadMore() {
-  visibleCount += PRODUCTS_PER_PAGE;
-  renderProducts(currentFilter, false);
+  if (_activeSearch) {
+    _searchVisibleCount += PRODUCTS_PER_PAGE;
+    renderSearchResults();
+  } else {
+    visibleCount += PRODUCTS_PER_PAGE;
+    renderProducts(currentFilter, false);
+  }
 }
 
 function filterProducts(filter, btn) {
@@ -1646,6 +1631,7 @@ function filterProducts(filter, btn) {
     if (btn) btn.classList.add('active');
     const sb = document.getElementById('searchBar');
     if (sb) { sb.value = ''; clearSearchDebounce(); }
+    _activeSearch = '';
     renderProducts(filter, true);
   } catch (e) {
     console.error('filterProducts error:', e);
@@ -1653,30 +1639,31 @@ function filterProducts(filter, btn) {
 }
 
 // ── SEARCH ──────────────────────────────────────────────────
-function searchProducts() {
-  const input = document.getElementById('searchBar').value.toLowerCase().trim();
-  if (!input) { renderProducts(currentFilter, true); return; }
+let _activeSearch = '';
+let _searchVisibleCount = PRODUCTS_PER_PAGE;
 
+function getSearchResults(query) {
+  return products.filter(p =>
+    p.name.toLowerCase().includes(query) ||
+    p.desc.toLowerCase().includes(query) ||
+    p.category.toLowerCase().includes(query)
+  );
+}
+
+function renderSearchResults() {
   const grid = document.getElementById('productsGrid');
   const count = document.getElementById('productsCount');
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(input) ||
-    p.desc.toLowerCase().includes(input) ||
-    p.category.toLowerCase().includes(input)
-  );
+  const filtered = getSearchResults(_activeSearch);
+  const visible = filtered.slice(0, _searchVisibleCount);
 
   count.textContent = `Found ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
-  document.getElementById('loadMoreWrap').style.display = 'none';
 
-  grid.innerHTML = filtered.map(p => `
+  grid.innerHTML = visible.map(p => `
     <div class="product-card fade-in-up" data-id="${p.id}">
       <div class="product-img-wrap">
         <span class="product-emoji">${p.emoji}</span>
         <div class="product-img-overlay"></div>
         ${p.badge ? `<div class="product-badge ${p.badge}">${p.badge === 'bestseller' ? 'Bestseller' : p.badge === 'custom' ? 'Custom' : 'New'}</div>` : ''}
-      </div>
-      <div class="card-actions">
-        <button class="quick-add" onclick="addToCart(${p.id}, event)">${p.category === 'healing' ? '+ Book Session' : '+ Add to Cart'}</button>
       </div>
       <div class="product-info">
         <div class="product-category">${p.category === 'salts' ? 'Energy Salts' : p.category === 'candles' ? 'Infused Candles' : 'Personal Healing'}</div>
@@ -1691,34 +1678,51 @@ function searchProducts() {
     </div>
   `).join('');
 
+  const wrap = document.getElementById('loadMoreWrap');
+  if (wrap) wrap.style.display = _searchVisibleCount >= filtered.length ? 'none' : 'block';
+
   observeAnimations();
+  setTimeout(attachCursorHovers, 100);
+}
+
+function searchProducts() {
+  const input = document.getElementById('searchBar').value.toLowerCase().trim();
+  if (!input) { _activeSearch = ''; renderProducts(currentFilter, true); return; }
+  _activeSearch = input;
+  _searchVisibleCount = PRODUCTS_PER_PAGE;
+  renderSearchResults();
 }
 
 // ── CART ─────────────────────────────────────────────────────
 function addToCart(id, event) {
   if (event) event.stopPropagation();
 
-  let customNotes = "";
+  let customNotes = '';
   if (id === 1000) {
     const notesInput = document.getElementById('candle-notes');
-    if (notesInput) {
-      customNotes = notesInput.value.trim();
-      if (customNotes === "") {
-        alert("Please tell us your intentions for the custom candle before adding to cart!");
-        return;
+    customNotes = notesInput ? notesInput.value.trim() : '';
+    if (!customNotes) {
+      // Scroll to the custom candle banner so the user can fill in their intention
+      const banner = document.getElementById('featured');
+      if (banner) {
+        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => { if (notesInput) notesInput.focus(); }, 400);
       }
+      showToastMessage('✏️', 'Please fill in your candle intention below!', '');
+      return;
     }
   }
 
   const product = products.find(p => p.id === id);
   if (!product) return;
 
-  const existing = cart.find(i => i.id === id);
+  // cartKey groups by id+notes so two custom candles with different intentions stay separate
+  const cartKey = id === 1000 ? `1000::${customNotes}` : String(id);
+  const existing = cart.find(i => i.cartKey === cartKey);
   if (existing) {
     existing.qty++;
-    if (id === 1000) existing.notes = customNotes;
   } else {
-    cart.push({ ...product, qty: 1, notes: customNotes });
+    cart.push({ ...product, qty: 1, notes: customNotes, cartKey });
   }
 
   updateCart();
@@ -1747,7 +1751,7 @@ function updateCart() {
   }
 
   footer.style.display = 'block';
-  body.innerHTML = cart.map(item => `
+  body.innerHTML = cart.map((item, idx) => `
     <div class="cart-item">
       <div class="cart-item-img">${item.emoji}</div>
       <div>
@@ -1755,29 +1759,28 @@ function updateCart() {
         <div class="cart-item-price">₹${item.price.toFixed(2)} each</div>
         ${item.notes ? `<div class="cart-item-notes">✎ ${item.notes}</div>` : ''}
         <div class="cart-item-qty">
-          <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+          <button class="qty-btn" onclick="changeQty(${idx}, -1)">−</button>
           <span class="qty-num">${item.qty}</span>
-          <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+          <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
         </div>
       </div>
       <div>
         <div class="cart-item-subtotal">₹${(item.price * item.qty).toFixed(2)}</div>
-        <button class="cart-item-remove" onclick="removeFromCart(${item.id})">✕</button>
+        <button class="cart-item-remove" onclick="removeFromCart(${idx})">✕</button>
       </div>
     </div>
   `).join('');
 }
 
-function changeQty(id, delta) {
-  const item = cart.find(i => i.id === id);
-  if (!item) return;
-  item.qty += delta;
-  if (item.qty <= 0) removeFromCart(id);
-  else updateCart();
+function changeQty(idx, delta) {
+  if (!cart[idx]) return;
+  cart[idx].qty += delta;
+  if (cart[idx].qty <= 0) cart.splice(idx, 1);
+  updateCart();
 }
 
-function removeFromCart(id) {
-  cart = cart.filter(i => i.id !== id);
+function removeFromCart(idx) {
+  cart.splice(idx, 1);
   updateCart();
 }
 
@@ -1799,18 +1802,19 @@ function openCheckout() {
   toggleCart();
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const isBookingOnly = hasOnlyHealingSessions();
+  const hasSessions  = hasAnyHealingSessions();
 
-  // Toggle address vs booking fields
-  document.getElementById('addressFields').style.display = isBookingOnly ? 'none' : 'block';
-  document.getElementById('bookingFields').style.display = isBookingOnly ? 'block' : 'none';
-  document.getElementById('checkoutTitle').textContent = isBookingOnly ? 'Book Your Session' : 'Complete Your Order';
+  // Show address for physical products; show booking when ANY session is in cart
+  document.getElementById('addressFields').style.display  = isBookingOnly ? 'none' : 'block';
+  document.getElementById('bookingFields').style.display  = hasSessions   ? 'block' : 'none';
+  document.getElementById('checkoutTitle').textContent    = isBookingOnly ? 'Book Your Session' : 'Complete Your Order';
 
   const box = document.getElementById('orderSummaryBox');
   box.innerHTML = `
     <div class="order-summary-title">Order Summary</div>
     ${cart.map(i => `
       <div class="order-line">
-        <span class="order-line-name">${i.emoji} ${i.name} × ${i.qty}</span>
+        <span class="order-line-name">${i.emoji} ${i.name}${i.notes ? ` (${i.notes})` : ''} × ${i.qty}</span>
         <span class="order-line-price">₹${(i.price * i.qty).toFixed(2)}</span>
       </div>
     `).join('')}
@@ -1850,39 +1854,42 @@ function setBtn(text, disabled) {
 
 function collectOrderData() {
   const isBookingOnly = hasOnlyHealingSessions();
-  let address;
+  const hasSessions   = hasAnyHealingSessions();
+  let address = '';
 
-  if (isBookingOnly) {
-    const date = document.getElementById('bookingDate').value || 'TBD';
-    const time = document.getElementById('bookingTime').value || 'TBD';
+  if (!isBookingOnly) {
+    address = [
+      document.getElementById('streetAddr').value.trim(),
+      document.getElementById('city').value.trim(),
+      document.getElementById('state').value.trim(),
+      document.getElementById('zipCode').value.trim(),
+    ].filter(Boolean).join(', ');
+  }
+
+  if (hasSessions) {
+    const date  = document.getElementById('bookingDate').value || 'TBD';
+    const time  = document.getElementById('bookingTime').value || 'TBD';
     const notes = document.getElementById('bookingNotes').value.trim();
-    address = `[SESSION] Date: ${date}, Time: ${time}${notes ? ', Notes: ' + notes : ''}`;
-  } else {
-    address = document.getElementById('streetAddr').value.trim() + ', ' +
-              document.getElementById('city').value.trim() + ', ' +
-              document.getElementById('state').value.trim() + ' ' +
-              document.getElementById('zipCode').value.trim();
+    const sessionStr = `[SESSION] Date: ${date}, Time: ${time}${notes ? ', Notes: ' + notes : ''}`;
+    address = isBookingOnly ? sessionStr : address + ' | ' + sessionStr;
   }
 
   return {
     name:    document.getElementById('firstName').value.trim() + ' ' + document.getElementById('lastName').value.trim(),
     phone:   document.getElementById('phoneNum').value.trim(),
     address,
-    // FIX: Include notes for custom candle
-    items:   cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes || '' })),
+    items:   cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price, notes: i.notes || '' })),
     total:   '₹' + cart.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2),
   };
 }
 
 function validateForm() {
   const isBookingOnly = hasOnlyHealingSessions();
+  const hasSessions   = hasAnyHealingSessions();
   const required = ['firstName', 'lastName', 'phoneNum'];
 
-  if (isBookingOnly) {
-    required.push('bookingDate', 'bookingTime');
-  } else {
-    required.push('streetAddr', 'city', 'state', 'zipCode');
-  }
+  if (hasSessions)   required.push('bookingDate', 'bookingTime');
+  if (!isBookingOnly) required.push('streetAddr', 'city', 'state', 'zipCode');
 
   let valid = true;
   required.forEach(id => {
@@ -1999,15 +2006,15 @@ function closeSuccess() {
 }
 
 // ── TOAST ───────────────────────────────────────────────────
-function showToast(emoji, name, price) {
+function _createToast(emoji, title, sub) {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
   toast.className = 'toast';
   toast.innerHTML = `
     <span class="toast-icon">${emoji}</span>
     <div class="toast-text">
-      <div class="toast-name">Added to cart!</div>
-      <div class="toast-sub">${name} — ₹${price.toFixed(2)}</div>
+      <div class="toast-name">${title}</div>
+      ${sub ? `<div class="toast-sub">${sub}</div>` : ''}
     </div>
     <span style="color:rgba(245,239,227,0.5);font-size:0.8rem;cursor:pointer" onclick="this.parentElement.remove()">✕</span>
   `;
@@ -2017,6 +2024,14 @@ function showToast(emoji, name, price) {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 400);
   }, 3500);
+}
+
+function showToast(emoji, name, price) {
+  _createToast(emoji, 'Added to cart!', `${name} — ₹${price.toFixed(2)}`);
+}
+
+function showToastMessage(emoji, title, sub) {
+  _createToast(emoji, title, sub);
 }
 
 // ── MOBILE NAV ──────────────────────────────────────────────
