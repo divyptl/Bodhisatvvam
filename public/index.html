@@ -903,7 +903,6 @@ function getSearchResults(query) {
   const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query) || p.category.toLowerCase().includes(query));
   return sortArray(filtered);
 }
-}
 
 function renderSearchResults() {
   const grid = document.getElementById('productsGrid');
