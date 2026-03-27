@@ -291,6 +291,21 @@ footer { background: var(--text-dark); padding: 70px 60px 36px; }
 .toast-text { flex: 1; }
 .toast-name { font-weight: 600; font-size: 0.9rem; }
 .toast-sub { font-size: 0.75rem; opacity: 0.7; margin-top: 2px; }
+/* ═══════════════════════════════════════════════════
+   NEW FEATURES: SORTING & QUICK VIEW
+═══════════════════════════════════════════════════ */
+.products-controls { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 32px; flex-wrap: wrap; gap: 16px; }
+.sort-select { padding: 8px 16px; border: 1px solid var(--cream-dark); background: transparent; font-family: 'Jost', sans-serif; font-size: 0.76rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-mid); outline: none; cursor: pointer; transition: all 0.25s; }
+.sort-select:focus, .sort-select:hover { border-color: var(--forest); }
+
+.quick-view-trigger { position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); background: var(--cream); color: var(--forest); border: none; padding: 10px 24px; font-family: 'Jost', sans-serif; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; transition: all 0.3s ease; opacity: 0; box-shadow: 0 8px 20px rgba(28,58,40,0.15); z-index: 20; white-space: nowrap; }
+.product-card:hover .quick-view-trigger { bottom: 24px; opacity: 1; }
+.quick-view-trigger:hover { background: var(--gold); color: var(--cream); }
+
+.qv-emoji { font-size: 4.5rem; margin-bottom: 16px; display: block; }
+.qv-title { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; color: var(--forest); line-height: 1.1; margin-bottom: 8px; }
+.qv-price { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--gold); font-weight: 500; margin-bottom: 24px; }
+.qv-desc { font-size: 0.95rem; color: var(--text-mid); line-height: 1.8; margin-bottom: 32px; }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes rotateSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -450,11 +465,18 @@ footer { background: var(--text-dark); padding: 70px 60px 36px; }
     <div class="products-header-left">
       <div class="section-tag">Our Offerings</div>
       <h2 class="section-title">Shop our <em>collection</em></h2>
-      <div class="filter-tabs">
-        <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
-        <button class="filter-tab" onclick="filterProducts('salts', this)">Energy Salts</button>
-        <button class="filter-tab" onclick="filterProducts('candles', this)">Infused Candles</button>
-        <button class="filter-tab" onclick="filterProducts('healing', this)">Personal Healing</button>
+      <div class="products-controls">
+        <div class="filter-tabs" style="margin-top:0;">
+          <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
+          <button class="filter-tab" onclick="filterProducts('salts', this)">Energy Salts</button>
+          <button class="filter-tab" onclick="filterProducts('candles', this)">Infused Candles</button>
+          <button class="filter-tab" onclick="filterProducts('healing', this)">Personal Healing</button>
+        </div>
+        <select id="sortSelect" class="sort-select" onchange="changeSort(this.value)">
+          <option value="featured">Sort By: Featured</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+        </select>
       </div>
     </div>
     <div class="products-count" id="productsCount">Loading...</div>
@@ -637,7 +659,13 @@ footer { background: var(--text-dark); padding: 70px 60px 36px; }
     </div>
   </div>
 </div>
-
+<div class="modal-overlay" id="quickViewOverlay" onclick="if(event.target===this) closeQuickView()">
+  <div class="checkout-modal" style="max-width: 500px; text-align: center; padding-bottom: 20px;">
+    <button class="modal-close" onclick="closeQuickView()" style="position:absolute; top:24px; right:28px; z-index:2;">✕</button>
+    <div class="modal-body" id="quickViewContent" style="padding: 48px 40px 24px;">
+      </div>
+  </div>
+</div>
 <div class="success-overlay" id="successOverlay">
   <div class="success-modal">
     <span class="success-icon">✨</span>
@@ -759,8 +787,55 @@ let _activeSearch = '';
 let _searchVisibleCount = PRODUCTS_PER_PAGE;
 let _searchDebounce;
 
+let currentSort = 'featured';
+
+function sortArray(arr) {
+  let sorted = [...arr]; // Prevent mutating original array
+  if (currentSort === 'price-low') sorted.sort((a, b) => a.price - b.price);
+  if (currentSort === 'price-high') sorted.sort((a, b) => b.price - a.price);
+  return sorted;
+}
+
+function changeSort(val) {
+  currentSort = val;
+  if (_activeSearch) {
+    renderSearchResults();
+  } else {
+    renderProducts(currentFilter, true);
+  }
+}
+
+function openQuickView(id, event) {
+  if(event) event.stopPropagation();
+  const p = products.find(prod => prod.id === id);
+  if(!p) return;
+  
+  const content = document.getElementById('quickViewContent');
+  const catName = p.category === 'salts' ? 'Energy Salts' : p.category === 'candles' ? 'Infused Candles' : 'Personal Healing';
+  const btnText = p.category === 'healing' ? '🌿 Book Session' : '🛒 Add to Cart';
+  
+  content.innerHTML = `
+    <span class="qv-emoji">${p.emoji}</span>
+    <div class="product-category" style="margin-bottom:8px;">${catName}</div>
+    <div class="qv-title">${p.name}</div>
+    <div class="star-rating" style="justify-content:center; margin-bottom:12px;">${'★'.repeat(p.rating)}</div>
+    <div class="qv-price">₹${p.price.toFixed(2)}</div>
+    <div class="qv-desc">${p.desc}</div>
+    <button class="btn-primary" onclick="addToCart(${p.id}, event); closeQuickView();" style="width:100%;">${btnText}</button>
+  `;
+  
+  document.getElementById('quickViewOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeQuickView() {
+  document.getElementById('quickViewOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+   
 function getFilteredProducts() {
-  return currentFilter === 'all' ? products : products.filter(p => p.category === currentFilter);
+  const filtered = currentFilter === 'all' ? products : products.filter(p => p.category === currentFilter);
+  return sortArray(filtered);
 }
 
 function renderProducts(filter, resetPage) {
@@ -774,11 +849,14 @@ function renderProducts(filter, resetPage) {
   count.textContent = `Showing ${visible.length} of ${filtered.length} offering${filtered.length !== 1 ? 's' : ''}`;
   grid.innerHTML = visible.map(p => `
     <div class="product-card fade-in-up" data-id="${p.id}">
+    
       <div class="product-img-wrap">
         <span class="product-emoji">${p.emoji}</span>
         <div class="product-img-overlay"></div>
         ${p.badge ? `<div class="product-badge ${p.badge}">${p.badge === 'bestseller' ? 'Bestseller' : p.badge === 'custom' ? 'Custom' : 'New'}</div>` : ''}
+        <button class="quick-view-trigger" onclick="openQuickView(${p.id}, event)">Quick View</button>
       </div>
+      
       <div class="product-info">
         <div class="product-category">${p.category === 'salts' ? 'Energy Salts' : p.category === 'candles' ? 'Infused Candles' : 'Personal Healing'}</div>
         <div class="product-name">${p.name}</div>
@@ -822,9 +900,9 @@ function filterProducts(filter, btn) {
 }
 
 function getSearchResults(query) {
-  return products.filter(p =>
-    p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)
-  );
+  const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query) || p.category.toLowerCase().includes(query));
+  return sortArray(filtered);
+}
 }
 
 function renderSearchResults() {
@@ -836,11 +914,14 @@ function renderSearchResults() {
   count.textContent = `Found ${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
   grid.innerHTML = visible.map(p => `
     <div class="product-card fade-in-up" data-id="${p.id}">
+    
       <div class="product-img-wrap">
         <span class="product-emoji">${p.emoji}</span>
         <div class="product-img-overlay"></div>
         ${p.badge ? `<div class="product-badge ${p.badge}">${p.badge === 'bestseller' ? 'Bestseller' : p.badge === 'custom' ? 'Custom' : 'New'}</div>` : ''}
+        <button class="quick-view-trigger" onclick="openQuickView(${p.id}, event)">Quick View</button>
       </div>
+      
       <div class="product-info">
         <div class="product-category">${p.category === 'salts' ? 'Energy Salts' : p.category === 'candles' ? 'Infused Candles' : 'Personal Healing'}</div>
         <div class="product-name">${p.name}</div>
