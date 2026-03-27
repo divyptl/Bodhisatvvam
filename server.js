@@ -140,31 +140,44 @@ async function pushToSheet(payload, attempt = 1) {
     }
 }
 
-async function sendWhatsApp(name, phone, orderId, total) {
+async function sendWhatsApp(name, phone, orderId, items, total, address) {
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return false;
     try {
-        // 🚨 IMPORTANT: You MUST use a Meta-approved template for order confirmations.
-        // Free-form text will be blocked outside the 24-hour window.
-        // Replace 'your_template_name' with your approved template name in Meta Business Suite.
+        const formattedItems = formatItemsForWhatsApp(items);
         const payload = {
             messaging_product: 'whatsapp',
             to: phone,
             type: 'template',
             template: {
-                name: 'order_confirmation', // <-- Your approved template name
+                name: 'order_confirmation', 
                 language: { code: 'en' },
                 components: [
                     {
                         type: 'body',
                         parameters: [
-                            { type: 'text', text: name },
-                            { type: 'text', text: orderId },
-                            { type: 'text', text: total }
+                            { type: 'text', text: name },                 // {{1}}
+                            { type: 'text', text: orderId },              // {{2}}
+                            { type: 'text', text: formattedItems },       // {{3}} The items list
+                            { type: 'text', text: total }                 // {{4}} The total price
                         ]
                     }
                 ]
             }
         };
+
+        const waResponse = await axios.post(
+            `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+            payload,
+            { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+        );
+        console.log(`✅ WhatsApp sent → ${orderId} (to: ${phone})`);
+        return true;
+    } catch (err) {
+        const msg = err?.response?.data?.error?.message || err.message;
+        console.error(`❌ WhatsApp error: ${msg}`);
+        return false;
+    }
+}
 
         const waResponse = await axios.post(
             `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
