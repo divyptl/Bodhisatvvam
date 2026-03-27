@@ -653,7 +653,11 @@ footer { background: var(--text-dark); padding: 70px 60px 36px; }
             <option value="5:00 PM">5:00 PM</option><option value="6:00 PM">6:00 PM</option>
           </select>
         </div>
-        <div class="form-group"><label class="form-label">Brief Description of Your Concern</label><textarea class="form-input" id="bookingNotes" rows="3" placeholder="e.g., I've been feeling anxious about work..." style="resize:vertical"></textarea></div>
+        <div class="form-group"><label class="form-label">Brief Description of Your Concern *</label><textarea class="form-input" id="bookingNotes" rows="3" placeholder="e.g., I've been feeling anxious about my upcoming interview..." style="resize:vertical"></textarea></div>
+      </div>
+       <div class="form-group" style="margin-top:28px">
+        <label class="form-label">Order Notes (Optional)</label>
+        <textarea class="form-input" id="generalNotes" rows="2" placeholder="Any special requests or instructions for your items?" style="resize:vertical"></textarea>
       </div>
       <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()">💳 Pay Now</button>
     </div>
@@ -1102,6 +1106,7 @@ function collectOrderData() {
   const isBookingOnly = hasOnlyHealingSessions();
   const hasSessions   = hasAnyHealingSessions();
   let address = '';
+  let finalNotesArray = []; 
 
   if (!isBookingOnly) {
     address = [
@@ -1115,15 +1120,30 @@ function collectOrderData() {
   if (hasSessions) {
     const date  = document.getElementById('bookingDate').value || 'TBD';
     const time  = document.getElementById('bookingTime').value || 'TBD';
-    const notes = document.getElementById('bookingNotes').value.trim();
-    const sessionStr = `[SESSION] Date: ${date}, Time: ${time}${notes ? ', Notes: ' + notes : ''}`;
+
+    const sessionStr = `[SESSION] Date: ${date}, Time: ${time}`;
     address = isBookingOnly ? sessionStr : address + ' | ' + sessionStr;
+     
+    const sNotes = document.getElementById('bookingNotes').value.trim();
+    if (sNotes) finalNotesArray.push(`Session Concern: ${sNotes}`);
   }
+
+  const generalNotesEl = document.getElementById('generalNotes');
+  if (generalNotesEl && generalNotesEl.value.trim()) {
+      finalNotesArray.push(`General Notes: ${generalNotesEl.value.trim()}`);
+  }
+
+  cart.forEach(item => {
+      if (item.notes) {
+          finalNotesArray.push(`${item.name} Intention: ${item.notes}`);
+      }
+  });
 
   return {
     name:    document.getElementById('firstName').value.trim() + ' ' + document.getElementById('lastName').value.trim(),
     phone:   document.getElementById('phoneNum').value.trim(),
-    address,
+    address: address, // Now completely clean
+    customerNotes: finalNotesArray.join(' | '),
     items:   cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price, notes: i.notes || '' })),
     total:   '₹' + cart.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2),
   };
@@ -1134,7 +1154,7 @@ function validateForm() {
   const hasSessions   = hasAnyHealingSessions();
   const required = ['firstName', 'lastName', 'phoneNum'];
 
-  if (hasSessions)   required.push('bookingDate', 'bookingTime');
+  if (hasSessions)   required.push('bookingDate', 'bookingTime', 'bookingNotes');
   if (!isBookingOnly) required.push('streetAddr', 'city', 'state', 'zipCode');
 
   let valid = true;
