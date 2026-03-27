@@ -193,7 +193,7 @@ async function sendWhatsApp(name, phone, orderId, items, total) {
 app.post('/api/create-order', orderLimiter, async (req, res) => {
     try {
         const body = req.body || {};
-        const { name, phone, address, items } = body;
+        const { name, phone, address, items, customerNotes } = body;
 
         if (!name || name.trim().length < 2) return res.status(400).json({ success: false, message: 'Name must be at least 2 characters.' });
         
@@ -244,7 +244,7 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
         const body = req.body || {};
         const {
             razorpay_order_id, razorpay_payment_id, razorpay_signature,
-            bodhiOrderId, name, phone, address, items
+            bodhiOrderId, name, phone, address, items, customerNotes
         } = body;
 
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -271,7 +271,7 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
 
         const sheetOk = await pushToSheet({
             orderId: bodhiOrderId, name, phone: sanitizedPhone,
-            address, items, total: secureTotalFormatted, status: 'Paid', paymentId: razorpay_payment_id,
+            address, items, total: secureTotalFormatted, status: 'Paid', paymentId: razorpay_payment_id, notes: customerNotes || "No notes provided"
         });
 
         // 🚨 Passed the items array properly
