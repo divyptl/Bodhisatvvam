@@ -121,6 +121,16 @@ function formatItemsForSheet(items) {
     }).join(', ');
 }
 
+// 🚨 Added missing WhatsApp formatter
+function formatItemsForWhatsApp(items) {
+    if (!Array.isArray(items)) return String(items);
+    return items.map(i => {
+        let str = `- ${i.name} x${i.qty}`;
+        if (i.notes) str += `\n  _Note: ${i.notes}_`;
+        return str;
+    }).join('\n');
+}
+
 async function pushToSheet(payload, attempt = 1) {
     if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_SECRET) return false;
     try {
@@ -140,7 +150,7 @@ async function pushToSheet(payload, attempt = 1) {
     }
 }
 
-async function sendWhatsApp(name, phone, orderId, items, total, address) {
+async function sendWhatsApp(name, phone, orderId, items, total) {
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return false;
     try {
         const formattedItems = formatItemsForWhatsApp(items);
@@ -175,18 +185,6 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
     } catch (err) {
         const msg = err?.response?.data?.error?.message || err.message;
         console.error(`❌ WhatsApp error: ${msg}`);
-        return false;
-    }
-}
-
-        const waResponse = await axios.post(
-            `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
-            payload,
-            { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
-        );
-        return true;
-    } catch (err) {
-        console.error(`❌ WhatsApp error: ${err.message}`);
         return false;
     }
 }
@@ -261,7 +259,6 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Payment verification failed.' });
         }
 
-        // 🚨 SECURITY FIX: Recalculate total so frontend cannot spoof the receipt data
         let secureTotal = 0;
         if (Array.isArray(items)) {
             for (const item of items) {
@@ -277,7 +274,8 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
             address, items, total: secureTotalFormatted, status: 'Paid', paymentId: razorpay_payment_id,
         });
 
-        const waOk = await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, secureTotalFormatted);
+        // 🚨 Passed the items array properly
+        const waOk = await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, secureTotalFormatted);
 
         if (!sheetOk && !waOk) {
             console.error(`🚨 Backup: ${bodhiOrderId} | ${razorpay_payment_id} | ${secureTotalFormatted}`);
