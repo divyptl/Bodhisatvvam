@@ -165,10 +165,11 @@ async function sendWhatsApp(name, phone, orderId, items, total) {
                     {
                         type: 'body',
                         parameters: [
-                            { type: 'text', text: name },                 // {{1}}
-                            { type: 'text', text: orderId },              // {{2}}
-                            { type: 'text', text: formattedItems },       // {{3}} The items list
-                            { type: 'text', text: total }                 // {{4}} The total price
+                            { type: 'text', text: name },                 
+                            { type: 'text', text: orderId },              
+                            { type: 'text', text: formattedItems },       
+                            { type: 'text', text: total },                 
+                            { type: 'text', text: customerNotes || 'None provided' } 
                         ]
                     }
                 ]
