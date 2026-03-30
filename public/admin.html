@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bodhisatvvam — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --forest:      #1c3a28;
+    --forest-light:#2d5a3d;
+    --sage:        #7a9e7e;
+    --cream:       #f5efe3;
+    --cream-dark:  #ede4d2;
+    --amber:       #c47c3a;
+    --gold:        #d4aa60;
+    --text-dark:   #1a2820;
+    --text-mid:    #3d5047;
+    --text-light:  #7a9080;
+    --danger:      #b85c38;
+    --success:     #2d6a4f;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Jost', sans-serif;
+    background: var(--cream);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* ── LOGIN SCREEN ── */
+  #loginScreen {
+    position: fixed; inset: 0;
+    background: var(--forest);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.4s ease;
+  }
+  #loginScreen.hidden { opacity: 0; pointer-events: none; }
+
+  .login-box {
+    background: rgba(245,239,227,0.05);
+    border: 1px solid rgba(212,170,96,0.25);
+    padding: 56px 48px;
+    width: 380px;
+    text-align: center;
+  }
+  .login-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem; font-weight: 300;
+    color: var(--cream); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .login-logo span { color: var(--gold); font-style: italic; }
+  .login-sub {
+    font-size: 0.72rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--sage);
+    margin-bottom: 40px;
+  }
+  .login-input {
+    width: 100%; padding: 14px 16px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(212,170,96,0.2);
+    color: var(--cream); font-family: 'Jost', sans-serif;
+    font-size: 0.95rem; letter-spacing: 0.1em;
+    outline: none; margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .login-input:focus { border-color: var(--gold); }
+  .login-input::placeholder { color: rgba(245,239,227,0.3); }
+  .login-btn {
+    width: 100%; padding: 14px;
+    background: var(--amber); color: white;
+    border: none; font-family: 'Jost', sans-serif;
+    font-size: 0.8rem; letter-spacing: 0.15em;
+    text-transform: uppercase; font-weight: 600;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .login-btn:hover { background: #d4894a; }
+  .login-error {
+    color: #e07a5f; font-size: 0.82rem;
+    margin-top: 12px; display: none;
+  }
+
+  /* ── DASHBOARD ── */
+  #dashboard { display: none; min-height: 100vh; }
+
+  /* Top nav */
+  .admin-nav {
+    background: var(--forest);
+    padding: 18px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+  }
+  .admin-nav-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem; color: var(--cream);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .admin-nav-logo span { color: var(--gold); font-style: italic; }
+  .admin-nav-right { display: flex; align-items: center; gap: 20px; }
+  .admin-tag {
+    font-size: 0.65rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--sage);
+    background: rgba(122,158,126,0.15);
+    padding: 4px 10px; border: 1px solid rgba(122,158,126,0.3);
+  }
+  .logout-btn {
+    background: transparent; border: 1px solid rgba(212,170,96,0.3);
+    color: var(--gold); font-family: 'Jost', sans-serif;
+    font-size: 0.72rem; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 8px 16px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .logout-btn:hover { background: rgba(212,170,96,0.1); }
+
+  /* Stats bar */
+  .stats-bar {
+    background: white;
+    border-bottom: 1px solid var(--cream-dark);
+    padding: 28px 40px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--cream-dark);
+  }
+  .stat-card {
+    background: white; padding: 24px 32px;
+    transition: background 0.2s;
+  }
+  .stat-card:hover { background: var(--cream); }
+  .stat-label {
+    font-size: 0.68rem; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-light);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.4rem; font-weight: 400;
+    color: var(--forest); line-height: 1;
+  }
+  .stat-sub { font-size: 0.75rem; color: var(--text-light); margin-top: 4px; }
+
+  /* Controls bar */
+  .controls-bar {
+    padding: 20px 40px;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 16px;
+    background: var(--cream);
+    border-bottom: 1px solid var(--cream-dark);
+  }
+  .controls-left { display: flex; gap: 12px; align-items: center; }
+  .search-input {
+    padding: 10px 16px; border: 1px solid var(--cream-dark);
+    background: white; font-family: 'Jost', sans-serif;
+    font-size: 0.85rem; width: 260px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--forest); }
+  .filter-select {
+    padding: 10px 16px; border: 1px solid var(--cream-dark);
+    background: white; font-family: 'Jost', sans-serif;
+    font-size: 0.82rem; outline: none; cursor: pointer;
+    color: var(--text-mid);
+  }
+  .refresh-btn {
+    padding: 10px 20px; background: var(--forest);
+    color: var(--cream); border: none;
+    font-family: 'Jost', sans-serif; font-size: 0.78rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .refresh-btn:hover { background: var(--forest-light); }
+  .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .orders-count {
+    font-size: 0.8rem; color: var(--text-light);
+  }
+
+  /* Orders table */
+  .table-wrap {
+    padding: 0 40px 40px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%; border-collapse: collapse;
+    background: white;
+    box-shadow: 0 1px 20px rgba(28,58,40,0.06);
+    margin-top: 24px;
+  }
+  thead tr {
+    background: var(--forest); color: var(--cream);
+  }
+  th {
+    padding: 14px 20px; text-align: left;
+    font-size: 0.68rem; letter-spacing: 0.15em;
+    text-transform: uppercase; font-weight: 500;
+    white-space: nowrap; cursor: pointer;
+    user-select: none; transition: background 0.2s;
+  }
+  th:hover { background: var(--forest-light); }
+  th.sorted { color: var(--gold); }
+  td {
+    padding: 14px 20px; font-size: 0.85rem;
+    border-bottom: 1px solid var(--cream-dark);
+    color: var(--text-mid); vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--cream); }
+
+  .order-id {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.95rem; color: var(--forest);
+    font-weight: 600; white-space: nowrap;
+  }
+  .customer-name { font-weight: 500; color: var(--text-dark); }
+  .phone-link {
+    color: var(--amber); text-decoration: none;
+    transition: color 0.2s;
+  }
+  .phone-link:hover { color: var(--forest); }
+  .items-cell {
+    max-width: 240px; font-size: 0.8rem;
+    line-height: 1.5; color: var(--text-light);
+  }
+  .total-cell {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem; color: var(--forest);
+    font-weight: 500; white-space: nowrap;
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-block; padding: 4px 12px;
+    font-size: 0.65rem; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 600;
+    border-radius: 2px;
+  }
+  .status-Paid       { background: rgba(45,106,79,0.12);  color: var(--success); }
+  .status-New\ Order { background: rgba(196,124,58,0.12); color: var(--amber); }
+  .status-Dispatched { background: rgba(28,58,40,0.1);    color: var(--forest); }
+  .status-Delivered  { background: rgba(45,106,79,0.2);   color: var(--success); }
+  .status-Cancelled  { background: rgba(184,92,56,0.1);   color: var(--danger); }
+
+  /* Status update dropdown -->*/
+  .status-select {
+    padding: 4px 8px; font-size: 0.75rem;
+    border: 1px solid var(--cream-dark);
+    background: white; color: var(--text-mid);
+    font-family: 'Jost', sans-serif;
+    cursor: pointer; outline: none;
+  }
+
+  /* Empty / loading states */
+  .table-message {
+    text-align: center; padding: 80px 40px;
+    color: var(--text-light);
+  }
+  .table-message-icon { font-size: 3rem; display: block; margin-bottom: 16px; }
+  .table-message-text { font-size: 0.9rem; }
+
+  /* Loading spinner overlay */
+  .loading-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(245,239,227,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 500;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+  }
+  .loading-overlay.active { display: flex; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--cream-dark);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .loading-text {
+    font-size: 0.8rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--text-light);
+  }
+
+  /* Toast notification -->*/
+  .toast-wrap {
+    position: fixed; bottom: 32px; right: 32px;
+    z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast-msg {
+    background: var(--forest); color: var(--cream);
+    padding: 12px 20px; font-size: 0.82rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+  }
+  .toast-msg.show { transform: translateX(0); }
+
+  /* Responsive -->*/
+  @media (max-width: 900px) {
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .admin-nav, .controls-bar, .table-wrap { padding-left: 20px; padding-right: 20px; }
+  }
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: 1fr; }
+    .controls-left { flex-wrap: wrap; }
+    .search-input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Bodhi<span>satvvam</span></div>
+    <div class="login-sub">Admin Dashboard</div>
+    <input type="password" id="passwordInput" class="login-input"
+           placeholder="Enter admin password"
+           onkeydown="if(event.key==='Enter') login()">
+    <button class="login-btn" onclick="login()">Enter Dashboard</button>
+    <div class="login-error" id="loginError">Incorrect password. Please try again.</div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div id="dashboard">
+
+  <!-- Nav -->
+  <nav class="admin-nav">
+    <div class="admin-nav-logo">Bodhi<span>satvvam</span></div>
+    <div class="admin-nav-right">
+      <span class="admin-tag">Admin</span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">Total Orders</div>
+      <div class="stat-value" id="statTotal">—</div>
+      <div class="stat-sub">All time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Revenue</div>
+      <div class="stat-value" id="statRevenue">—</div>
+      <div class="stat-sub">Paid orders only</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Today's Orders</div>
+      <div class="stat-value" id="statToday">—</div>
+      <div class="stat-sub" id="statTodayDate">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value" id="statPending">—</div>
+      <div class="stat-sub">Awaiting dispatch</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-bar">
+    <div class="controls-left">
+      <input type="text" id="searchInput" class="search-input"
+             placeholder="🔍 Search by name, phone, order ID..."
+             oninput="filterOrders()">
+      <select class="filter-select" id="statusFilter" onchange="filterOrders()">
+        <option value="">All Statuses</option>
+        <option value="Paid">Paid</option>
+        <option value="New Order">New Order</option>
+        <option value="Dispatched">Dispatched</option>
+        <option value="Delivered">Delivered</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span class="orders-count" id="ordersCount"></span>
+      <button class="refresh-btn" id="refreshBtn" onclick="loadOrders()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="ordersTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('date')">Date ↕</th>
+          <th onclick="sortBy('orderId')">Order ID ↕</th>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Items</th>
+          <th onclick="sortBy('total')">Total ↕</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody">
+        <tr>
+          <td colspan="7">
+            <div class="table-message">
+              <span class="table-message-icon">✨</span>
+              <div class="table-message-text">Loading orders...</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading orders...</div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+// ⚠️ Set these to your actual values
+const ADMIN_PASSWORD    = 'Divy@969P'; // Change this to something strong!
+const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL_HERE'; // Same URL as in server.js
+
+// ── STATE ─────────────────────────────────────────────────
+let allOrders   = [];
+let sortKey     = 'date';
+let sortDir     = -1; // -1 = descending (newest first)
+
+// ── AUTH ──────────────────────────────────────────────────
+function login() {
+  const input = document.getElementById('passwordInput').value;
+  if (input === ADMIN_PASSWORD) {
+    sessionStorage.setItem('bdh_admin', 'true');
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('dashboard').style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('loginScreen').style.display = 'none';
+    }, 400);
+    loadOrders();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').focus();
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('bdh_admin');
+  location.reload();
+}
+
+// Check if already logged in this session
+if (sessionStorage.getItem('bdh_admin') === 'true') {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadOrders();
+}
+
+// ── LOAD ORDERS FROM GOOGLE SHEET ─────────────────────────
+async function loadOrders() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  document.getElementById('loadingOverlay').classList.add('active');
+
+  try {
+    // Fetch orders from Google Sheet via Apps Script
+    const url = `${GOOGLE_SCRIPT_URL}?action=getOrders`;
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.success && data.orders) {
+      allOrders = data.orders;
+      updateStats();
+      renderOrders();
+      showToast('✅ Orders refreshed');
+    } else {
+      showToast('❌ Could not load orders');
+      showEmpty('Could not load orders. Check your Google Script URL.');
+    }
+  } catch (err) {
+    console.error('Load error:', err);
+    showToast('❌ Connection failed');
+    showEmpty('Connection failed. Make sure the Google Script is deployed.');
+  } finally {
+    btn.classList.remove('spinning');
+    document.getElementById('loadingOverlay').classList.remove('active');
+  }
+}
+
+// ── STATS ─────────────────────────────────────────────────
+function updateStats() {
+  const today = new Date().toLocaleDateString('en-IN');
+
+  const total    = allOrders.length;
+  const todayOrders = allOrders.filter(o => {
+    const d = new Date(o.date).toLocaleDateString('en-IN');
+    return d === today;
+  });
+  const pending  = allOrders.filter(o =>
+    o.status === 'New Order' || o.status === 'Paid'
+  ).length;
+
+  // Revenue from paid/dispatched/delivered orders
+  const revenue  = allOrders
+    .filter(o => ['Paid','Dispatched','Delivered'].includes(o.status))
+    .reduce((sum, o) => {
+      const num = parseFloat(String(o.total).replace(/[^0-9.]/g, ''));
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statRevenue').textContent = '₹' + revenue.toLocaleString('en-IN');
+  document.getElementById('statToday').textContent   = todayOrders.length;
+  document.getElementById('statTodayDate').textContent = today;
+  document.getElementById('statPending').textContent = pending;
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────
+function renderOrders(orders) {
+  const list = orders || getFilteredSorted();
+  const tbody = document.getElementById('ordersBody');
+  document.getElementById('ordersCount').textContent =
+    `Showing ${list.length} of ${allOrders.length} orders`;
+
+  if (list.length === 0) {
+    showEmpty('No orders match your search.');
+    return;
+  }
+
+  tbody.innerHTML = list.map((o, idx) => `
+    <tr>
+      <td style="white-space:nowrap;font-size:0.78rem;color:var(--text-light)">
+        ${formatDate(o.date)}
+      </td>
+      <td><div class="order-id">${o.orderId || '—'}</div></td>
+      <td><div class="customer-name">${o.name || '—'}</div></td>
+      <td>
+        <a href="https://wa.me/${o.phone}" target="_blank"
+           class="phone-link" title="Open WhatsApp">
+          📱 ${o.phone || '—'}
+        </a>
+      </td>
+      <td><div class="items-cell">${o.items || '—'}</div></td>
+      <td><div class="total-cell">${o.total || '—'}</div></td>
+      <td>
+        <span class="status-badge status-${o.status || 'New Order'}">
+          ${o.status || 'New Order'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function showEmpty(msg) {
+  document.getElementById('ordersBody').innerHTML = `
+    <tr><td colspan="7">
+      <div class="table-message">
+        <span class="table-message-icon">🌿</span>
+        <div class="table-message-text">${msg}</div>
+      </div>
+    </td></tr>`;
+}
+
+// ── FILTER & SORT ─────────────────────────────────────────
+function getFilteredSorted() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+
+  let list = allOrders.filter(o => {
+    const matchSearch = !search ||
+      (o.name    || '').toLowerCase().includes(search) ||
+      (o.phone   || '').includes(search) ||
+      (o.orderId || '').toLowerCase().includes(search) ||
+      (o.items   || '').toLowerCase().includes(search);
+    const matchStatus = !status || o.status === status;
+    return matchSearch && matchStatus;
+  });
+
+  list.sort((a, b) => {
+    let av = a[sortKey] || '', bv = b[sortKey] || '';
+    if (sortKey === 'total') {
+      av = parseFloat(String(av).replace(/[^0-9.]/g, '')) || 0;
+      bv = parseFloat(String(bv).replace(/[^0-9.]/g, '')) || 0;
+    } else if (sortKey === 'date') {
+      av = new Date(av).getTime() || 0;
+      bv = new Date(bv).getTime() || 0;
+    }
+    return av > bv ? sortDir : av < bv ? -sortDir : 0;
+  });
+
+  return list;
+}
+
+function filterOrders() { renderOrders(); }
+
+function sortBy(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = -1; }
+  renderOrders();
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+function showToast(msg) {
+  const wrap  = document.getElementById('toastWrap');
+  const toast = document.createElement('div');
+  toast.className = 'toast-msg';
+  toast.textContent = msg;
+  wrap.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 400);
+  }, 3000);
+}
+</script>
+</body>
+</html>
