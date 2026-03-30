@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book a Healing Session — Bodhisatvvam</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --forest:      #1c3a28;
+    --forest-light:#2d5a3d;
+    --sage:        #7a9e7e;
+    --sage-light:  #a8c5aa;
+    --cream:       #f5efe3;
+    --cream-dark:  #ede4d2;
+    --amber:       #c47c3a;
+    --amber-light: #e09456;
+    --gold:        #d4aa60;
+    --text-dark:   #1a2820;
+    --text-mid:    #3d5047;
+    --text-light:  #7a9080;
+    --danger:      #b85c38;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Jost', sans-serif;
+    background: var(--cream);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--forest);
+    padding: 20px 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem; font-weight: 300;
+    color: var(--cream); letter-spacing: 0.08em;
+    text-decoration: none; text-transform: uppercase;
+  }
+  .nav-logo span { color: var(--gold); font-style: italic; }
+  .nav-back {
+    font-size: 0.75rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--sage-light);
+    text-decoration: none; transition: color 0.2s;
+  }
+  .nav-back:hover { color: var(--cream); }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--forest);
+    padding: 60px 60px 80px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(122,158,126,0.2) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 30%, rgba(212,170,96,0.15) 0%, transparent 50%);
+  }
+  .hero-tag {
+    font-size: 0.7rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gold);
+    margin-bottom: 16px; position: relative;
+  }
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.4rem, 4vw, 3.6rem);
+    font-weight: 300; color: var(--cream);
+    line-height: 1.1; margin-bottom: 16px;
+    position: relative;
+  }
+  .hero-title em { color: var(--gold); font-style: italic; }
+  .hero-sub {
+    font-size: 0.95rem; font-weight: 300;
+    color: var(--sage-light); max-width: 520px;
+    margin: 0 auto; line-height: 1.8; position: relative;
+  }
+
+  /* ── SESSION TYPES ── */
+  .session-section {
+    max-width: 900px; margin: -40px auto 0;
+    padding: 0 40px; position: relative; z-index: 2;
+  }
+  .session-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .session-card {
+    background: white; border: 2px solid var(--cream-dark);
+    padding: 28px 24px; cursor: pointer;
+    transition: all 0.25s; text-align: center;
+    position: relative;
+  }
+  .session-card:hover { border-color: var(--sage); transform: translateY(-3px); }
+  .session-card.selected {
+    border-color: var(--forest); background: var(--forest);
+  }
+  .session-card.selected .session-name,
+  .session-card.selected .session-price,
+  .session-card.selected .session-duration { color: var(--cream); }
+  .session-card.selected .session-desc { color: var(--sage-light); }
+  .session-icon { font-size: 2rem; margin-bottom: 12px; display: block; }
+  .session-name {
+    font-weight: 600; font-size: 0.88rem;
+    letter-spacing: 0.05em; color: var(--text-dark);
+    margin-bottom: 6px;
+  }
+  .session-desc {
+    font-size: 0.78rem; color: var(--text-light);
+    line-height: 1.5; margin-bottom: 12px;
+  }
+  .session-price {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem; color: var(--forest); font-weight: 500;
+  }
+  .session-duration {
+    font-size: 0.72rem; color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px;
+  }
+  .selected-check {
+    position: absolute; top: 12px; right: 12px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--gold); display: none;
+    align-items: center; justify-content: center;
+    font-size: 0.7rem; color: var(--forest);
+  }
+  .session-card.selected .selected-check { display: flex; }
+
+  /* ── BOOKING FORM ── */
+  .booking-section {
+    max-width: 900px; margin: 40px auto 80px;
+    padding: 0 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  }
+
+  /* Calendar */
+  .panel {
+    background: white;
+    box-shadow: 0 2px 20px rgba(28,58,40,0.06);
+  }
+  .panel-header {
+    background: var(--forest); padding: 20px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem; color: var(--cream); font-weight: 300;
+  }
+  .panel-body { padding: 24px 28px; }
+
+  .cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .cal-nav-btn {
+    background: none; border: 1px solid var(--cream-dark);
+    width: 32px; height: 32px; cursor: pointer;
+    font-size: 1rem; color: var(--text-mid);
+    transition: all 0.2s; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .cal-nav-btn:hover { background: var(--forest); color: var(--cream); border-color: var(--forest); }
+  .cal-month {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem; color: var(--forest);
+  }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-day-label {
+    text-align: center; font-size: 0.65rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-light); padding: 4px 0 8px;
+  }
+  .cal-day {
+    aspect-ratio: 1; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 0.82rem; cursor: pointer;
+    border-radius: 2px; transition: all 0.15s;
+    color: var(--text-mid);
+  }
+  .cal-day:hover:not(.disabled):not(.empty) {
+    background: var(--cream-dark); color: var(--forest);
+  }
+  .cal-day.selected {
+    background: var(--forest); color: var(--cream) !important;
+  }
+  .cal-day.today {
+    border: 1px solid var(--amber); color: var(--amber); font-weight: 600;
+  }
+  .cal-day.disabled {
+    color: var(--cream-dark); cursor: not-allowed;
+  }
+  .cal-day.empty { cursor: default; }
+  .cal-day.has-slots::after {
+    content: ''; display: block;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--sage); margin: 2px auto 0;
+  }
+
+  /* Time slots */
+  .slots-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .slot-btn {
+    padding: 12px 8px; border: 1px solid var(--cream-dark);
+    background: white; font-family: 'Jost', sans-serif;
+    font-size: 0.82rem; cursor: pointer;
+    transition: all 0.2s; color: var(--text-mid);
+    text-align: center;
+  }
+  .slot-btn:hover:not(.booked) {
+    border-color: var(--forest); color: var(--forest);
+  }
+  .slot-btn.selected {
+    background: var(--forest); color: var(--cream); border-color: var(--forest);
+  }
+  .slot-btn.booked {
+    background: var(--cream); color: var(--text-light);
+    cursor: not-allowed; font-size: 0.72rem;
+    text-decoration: line-through; opacity: 0.6;
+  }
+  .no-date-msg {
+    text-align: center; padding: 32px 0;
+    color: var(--text-light); font-size: 0.85rem;
+  }
+
+  /* Details form -->*/
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    display: block; font-size: 0.72rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-mid); font-weight: 500; margin-bottom: 6px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 12px 14px;
+    border: 1px solid var(--cream-dark);
+    background: white; font-family: 'Jost', sans-serif;
+    font-size: 0.9rem; color: var(--text-dark);
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--forest);
+  }
+  .form-textarea { resize: vertical; min-height: 80px; }
+
+  /* Booking summary -->*/
+  .summary-box {
+    background: var(--forest); padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .summary-row {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.85rem;
+  }
+  .summary-row:last-child { border: none; }
+  .summary-label { color: var(--sage-light); }
+  .summary-value { color: var(--cream); font-weight: 500; }
+  .summary-total {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem; color: var(--gold);
+  }
+
+  /* Book button -->*/
+  .book-btn {
+    width: 100%; padding: 16px;
+    background: var(--amber); color: white;
+    border: none; font-family: 'Jost', sans-serif;
+    font-size: 0.88rem; letter-spacing: 0.15em;
+    text-transform: uppercase; font-weight: 600;
+    cursor: pointer; transition: all 0.25s;
+  }
+  .book-btn:hover:not(:disabled) {
+    background: var(--amber-light); transform: translateY(-2px);
+  }
+  .book-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .error-msg {
+    color: var(--danger); font-size: 0.82rem;
+    margin-top: 10px; text-align: center; display: none;
+  }
+
+  /* Success overlay -->*/
+  .success-overlay {
+    position: fixed; inset: 0;
+    background: rgba(28,58,40,0.85);
+    z-index: 9999; display: flex;
+    align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .success-overlay.open { opacity: 1; pointer-events: all; }
+  .success-modal {
+    background: var(--cream); padding: 60px;
+    text-align: center; max-width: 480px; width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .success-overlay.open .success-modal { transform: scale(1); }
+  .success-icon { font-size: 3.5rem; display: block; margin-bottom: 20px; }
+  .success-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem; color: var(--forest); margin-bottom: 12px;
+  }
+  .success-detail {
+    font-size: 0.88rem; color: var(--text-mid);
+    line-height: 1.8; margin-bottom: 28px;
+  }
+  .success-id {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem; color: var(--amber); margin-bottom: 28px;
+  }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; }
+    .hero { padding: 40px 24px 60px; }
+    .session-section { padding: 0 20px; }
+    .session-grid { grid-template-columns: 1fr; }
+    .booking-section { grid-template-columns: 1fr; padding: 0 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="/" class="nav-logo">Bodhi<span>satvvam</span></a>
+  <a href="/#products" class="nav-back">← Back to Shop</a>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-tag">Online Healing Sessions</div>
+  <h1 class="hero-title">Book a Session with<br><em>Neepa Patel</em></h1>
+  <p class="hero-sub">One-on-one video call sessions. Choose your healing modality, pick a date and time that works for you, and pay securely online.</p>
+</div>
+
+<!-- Session Types -->
+<div class="session-section">
+  <div class="session-grid" id="sessionGrid">
+    <!-- Rendered by JS -->
+  </div>
+</div>
+
+<!-- Booking Form -->
+<div class="booking-section">
+
+  <!-- Left: Calendar + Slots -->
+  <div>
+    <!-- Calendar -->
+    <div class="panel" style="margin-bottom:24px">
+      <div class="panel-header">
+        <div class="panel-title">Choose a Date</div>
+      </div>
+      <div class="panel-body">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="prevMonth()">‹</button>
+          <div class="cal-month" id="calMonth"></div>
+          <button class="cal-nav-btn" onclick="nextMonth()">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+    </div>
+
+    <!-- Time Slots -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Choose a Time</div>
+        <div style="font-size:0.72rem;color:var(--sage-light);letter-spacing:0.1em">IST</div>
+      </div>
+      <div class="panel-body">
+        <div id="slotsContainer">
+          <div class="no-date-msg">Please select a date first</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Details + Summary -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Your Details</div>
+      </div>
+      <div class="panel-body">
+
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" class="form-input" id="bookName" placeholder="Your full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp Number *</label>
+          <input type="tel" class="form-input" id="bookPhone" placeholder="+91 9876543210">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="bookEmail" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">What would you like to work on?</label>
+          <textarea class="form-textarea" id="bookNotes"
+            placeholder="Briefly describe what you'd like to address in this session..."></textarea>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-box" id="summaryBox" style="display:none">
+          <div class="summary-row">
+            <span class="summary-label">Session</span>
+            <span class="summary-value" id="sumSession">—</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Date</span>
+            <span class="summary-value" id="sumDate">—</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Time</span>
+            <span class="summary-value" id="sumTime">—</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Mode</span>
+            <span class="summary-value">Video Call (Online)</span>
+          </div>
+          <div class="summary-row" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.15)">
+            <span class="summary-label" style="font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase">Total</span>
+            <span class="summary-total" id="sumTotal">—</span>
+          </div>
+        </div>
+
+        <div class="error-msg" id="bookError"></div>
+        <button class="book-btn" id="bookBtn" onclick="bookSession()">
+          💳 Pay & Confirm Booking
+        </button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success overlay -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-modal">
+    <span class="success-icon">🌸</span>
+    <div class="success-title">Session Booked!</div>
+    <p class="success-detail" id="successDetail">
+      Your healing session has been confirmed. You'll receive a WhatsApp message with the video call link shortly.
+    </p>
+    <div class="success-id" id="successId"></div>
+    <button onclick="location.href='/'" style="
+      padding: 14px 40px; background: var(--forest); color: var(--cream);
+      border: none; cursor: pointer; font-family: Jost,sans-serif;
+      font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase;
+    ">Return to Shop</button>
+  </div>
+</div>
+
+<!-- Razorpay SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+// ⚠️ Replace with your actual Render URL
+const API_BASE = 'https://YOUR-RENDER-APP-NAME.onrender.com';
+
+// Fixed time slots (IST) — edit these to match Neepa's availability
+const TIME_SLOTS = [
+  '09:00 AM', '10:00 AM', '11:00 AM',
+  '12:00 PM', '02:00 PM', '03:00 PM',
+  '04:00 PM', '05:00 PM', '06:00 PM',
+  '07:00 PM',
+];
+
+// Session types — match the healing sessions from products
+const SESSIONS = [
+  {
+    id: 'chakra',
+    name: 'Chakra Healing & Balancing',
+    icon: '✨',
+    desc: 'Clear blockages and restore your energy centres.',
+    price: 2499,
+    duration: '60 min',
+  },
+  {
+    id: 'nlp',
+    name: 'NLP Therapy',
+    icon: '🧠',
+    desc: 'Rewire your mindset with Neuro-Linguistic Programming.',
+    price: 2499,
+    duration: '60 min',
+  },
+  {
+    id: 'pranic',
+    name: 'Pranic Healing',
+    icon: '💫',
+    desc: 'Advanced energy healing to restore your aura.',
+    price: 2499,
+    duration: '60 min',
+  },
+  {
+    id: 'aura',
+    name: 'Aura Cleaning & Energize',
+    icon: '🌿',
+    desc: 'Deep cleanse and energize your aura field.',
+    price: 2499,
+    duration: '60 min',
+  },
+  {
+    id: 'relationship',
+    name: 'Relationship Healing',
+    icon: '💖',
+    desc: 'Heal and restore harmony in your relationships.',
+    price: 2499,
+    duration: '60 min',
+  },
+  {
+    id: 'mental',
+    name: 'Mental & Emotional Healing',
+    icon: '🧘',
+    desc: 'Overcome anxiety, fear, stress and negativity.',
+    price: 2499,
+    duration: '60 min',
+  },
+];
+
+// ── STATE ─────────────────────────────────────────────────
+let selectedSession = null;
+let selectedDate    = null;
+let selectedSlot    = null;
+let bookedSlots     = {}; // { 'YYYY-MM-DD': ['09:00 AM', ...] }
+let calYear, calMonth;
+
+// ── INIT ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  calYear   = now.getFullYear();
+  calMonth  = now.getMonth();
+  renderSessions();
+  renderCalendar();
+  fetchBookedSlots();
+
+  // Auto-select session if passed via URL param from the shop
+  // e.g. /booking.html?session=Chakra%20Healing%20%26%20Balancing
+  const params      = new URLSearchParams(window.location.search);
+  const sessionName = params.get('session');
+  if (sessionName) {
+    const match = SESSIONS.find(s =>
+      s.name.toLowerCase() === decodeURIComponent(sessionName).toLowerCase()
+    );
+    if (match) {
+      selectSession(match.id);
+      // Smooth scroll past the hero to the session cards
+      document.querySelector('.session-section')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+});
+
+// ── SESSIONS ──────────────────────────────────────────────
+function renderSessions() {
+  document.getElementById('sessionGrid').innerHTML = SESSIONS.map(s => `
+    <div class="session-card" id="sess-${s.id}" onclick="selectSession('${s.id}')">
+      <span class="selected-check">✓</span>
+      <span class="session-icon">${s.icon}</span>
+      <div class="session-name">${s.name}</div>
+      <div class="session-desc">${s.desc}</div>
+      <div class="session-price">₹${s.price.toLocaleString('en-IN')}</div>
+      <div class="session-duration">${s.duration} · Video Call</div>
+    </div>
+  `).join('');
+}
+
+function selectSession(id) {
+  selectedSession = SESSIONS.find(s => s.id === id);
+  document.querySelectorAll('.session-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('sess-' + id).classList.add('selected');
+  updateSummary();
+  document.querySelector('.booking-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── CALENDAR ──────────────────────────────────────────────
+const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+
+function renderCalendar() {
+  document.getElementById('calMonth').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const grid  = document.getElementById('calGrid');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const first = new Date(calYear, calMonth, 1).getDay();
+  const days  = new Date(calYear, calMonth + 1, 0).getDate();
+
+  let html = DAYS.map(d => `<div class="cal-day-label">${d}</div>`).join('');
+
+  // Empty cells before first day
+  for (let i = 0; i < first; i++) html += `<div class="cal-day empty"></div>`;
+
+  for (let d = 1; d <= days; d++) {
+    const date    = new Date(calYear, calMonth, d);
+    const dateStr = toDateStr(date);
+    const isPast  = date < today;
+    const isSun   = date.getDay() === 0;
+    const isTod   = date.toDateString() === today.toDateString();
+    const isSel   = selectedDate === dateStr;
+    const hasSlots = !isPast && !isSun &&
+      (bookedSlots[dateStr] || []).length < TIME_SLOTS.length;
+
+    let cls = 'cal-day';
+    if (isPast || isSun) cls += ' disabled';
+    if (isTod)   cls += ' today';
+    if (isSel)   cls += ' selected';
+    if (hasSlots && !isPast && !isSun) cls += ' has-slots';
+
+    const click = (!isPast && !isSun) ? `onclick="selectDate('${dateStr}')"` : '';
+    html += `<div class="${cls}" ${click}>${d}</div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function prevMonth() {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function nextMonth() {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+  selectedSlot = null;
+  renderCalendar();
+  renderSlots();
+  updateSummary();
+}
+
+// ── SLOTS ─────────────────────────────────────────────────
+function renderSlots() {
+  const container = document.getElementById('slotsContainer');
+  if (!selectedDate) {
+    container.innerHTML = `<div class="no-date-msg">Please select a date first</div>`;
+    return;
+  }
+
+  const booked = bookedSlots[selectedDate] || [];
+  container.innerHTML = `<div class="slots-grid">` +
+    TIME_SLOTS.map(slot => {
+      const isBooked = booked.includes(slot);
+      const isSel    = selectedSlot === slot;
+      let cls = 'slot-btn';
+      if (isBooked) cls += ' booked';
+      else if (isSel) cls += ' selected';
+      const label = isBooked ? `${slot}<br><small>Not available</small>` : slot;
+      const click = !isBooked ? `onclick="selectSlot('${slot}')"` : '';
+      return `<button class="${cls}" ${click}>${label}</button>`;
+    }).join('') +
+  `</div>`;
+}
+
+function selectSlot(slot) {
+  selectedSlot = slot;
+  renderSlots();
+  updateSummary();
+}
+
+// ── FETCH BOOKED SLOTS FROM SHEET ─────────────────────────
+async function fetchBookedSlots() {
+  try {
+    const res  = await fetch(`${API_BASE}/api/bookings/slots`);
+    const data = await res.json();
+    if (data.success) {
+      bookedSlots = data.slots || {};
+      renderCalendar();
+      if (selectedDate) renderSlots();
+    }
+  } catch (err) {
+    console.log('Could not fetch slots — assuming all available');
+  }
+}
+
+// ── SUMMARY ───────────────────────────────────────────────
+function updateSummary() {
+  if (!selectedSession && !selectedDate && !selectedSlot) return;
+  document.getElementById('summaryBox').style.display = 'block';
+  document.getElementById('sumSession').textContent =
+    selectedSession ? selectedSession.name : '— Select a session —';
+  document.getElementById('sumDate').textContent =
+    selectedDate ? formatDisplayDate(selectedDate) : '— Select a date —';
+  document.getElementById('sumTime').textContent =
+    selectedSlot || '— Select a time —';
+  document.getElementById('sumTotal').textContent =
+    selectedSession ? '₹' + selectedSession.price.toLocaleString('en-IN') : '—';
+}
+
+// ── BOOK SESSION ──────────────────────────────────────────
+async function bookSession() {
+  const name  = document.getElementById('bookName').value.trim();
+  const phone = document.getElementById('bookPhone').value.trim();
+  const email = document.getElementById('bookEmail').value.trim();
+  const notes = document.getElementById('bookNotes').value.trim();
+
+  // Validation
+  if (!selectedSession) return showError('Please select a session type.');
+  if (!selectedDate)    return showError('Please select a date.');
+  if (!selectedSlot)    return showError('Please select a time slot.');
+  if (!name)            return showError('Please enter your full name.');
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 10) return showError('Please enter a valid WhatsApp number.');
+  showError('');
+
+  const btn = document.getElementById('bookBtn');
+  btn.textContent = '⏳ Initiating Payment…';
+  btn.disabled = true;
+
+  const bookingData = {
+    sessionId:   selectedSession.id,
+    sessionName: selectedSession.name,
+    date:        selectedDate,
+    slot:        selectedSlot,
+    price:       selectedSession.price,
+    name, phone: digits, email, notes,
+  };
+
+  try {
+    // Step 1 — Create Razorpay order
+    const createRes  = await fetch(`${API_BASE}/api/create-booking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bookingData),
+    });
+    const createData = await createRes.json();
+
+    if (!createRes.ok || !createData.success) {
+      showError(createData.message || 'Could not start payment. Please try again.');
+      btn.textContent = '💳 Pay & Confirm Booking';
+      btn.disabled = false;
+      return;
+    }
+
+    btn.textContent = '💳 Pay & Confirm Booking';
+    btn.disabled = false;
+
+    // Step 2 — Open Razorpay
+    const rzp = new Razorpay({
+      key:         createData.keyId,
+      amount:      createData.amount,
+      currency:    'INR',
+      name:        'Bodhisatvvam',
+      description: `${selectedSession.name} — ${formatDisplayDate(selectedDate)} at ${selectedSlot}`,
+      order_id:    createData.razorpayOrderId,
+      prefill:     { name, contact: digits, email },
+      theme:       { color: '#1c3a28' },
+      modal: {
+        ondismiss: () => {
+          btn.textContent = '💳 Pay & Confirm Booking';
+          btn.disabled = false;
+          showError('Payment cancelled. You can try again.');
+        }
+      },
+      handler: async function(response) {
+        btn.textContent = '⏳ Confirming Booking…';
+        btn.disabled = true;
+        try {
+          // Step 3 — Verify payment + confirm booking
+          const verifyRes  = await fetch(`${API_BASE}/api/verify-booking`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+              bookingId:           createData.bookingId,
+              ...bookingData,
+            }),
+          });
+          const verifyData = await verifyRes.json();
+
+          if (verifyRes.ok && verifyData.success) {
+            document.getElementById('successId').textContent = verifyData.bookingId;
+            document.getElementById('successDetail').textContent =
+              `Your ${selectedSession.name} session is confirmed for ${formatDisplayDate(selectedDate)} at ${selectedSlot} IST. ` +
+              `Neepa will send you the video call link on WhatsApp before your session. 🌸`;
+            document.getElementById('successOverlay').classList.add('open');
+            // Refresh booked slots
+            bookedSlots[selectedDate] = [...(bookedSlots[selectedDate] || []), selectedSlot];
+            renderCalendar();
+            renderSlots();
+          } else {
+            showError(verifyData.message || 'Payment done but confirmation failed. Please WhatsApp us with payment ID: ' + response.razorpay_payment_id);
+          }
+        } catch (err) {
+          showError('Booking confirmed but server error. Please WhatsApp us: +91 9737171090');
+        } finally {
+          btn.textContent = '💳 Pay & Confirm Booking';
+          btn.disabled = false;
+        }
+      }
+    });
+    rzp.open();
+
+  } catch (err) {
+    showError('Could not connect. Please try again or WhatsApp us.');
+    btn.textContent = '💳 Pay & Confirm Booking';
+    btn.disabled = false;
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+
+// Use LOCAL date parts — toISOString() converts to UTC which causes
+// off-by-one day errors in IST (UTC+5:30) and other timezones
+function toDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatDisplayDate(str) {
+  // Parse date parts directly to avoid any UTC conversion
+  const [y, mo, d] = str.split('-').map(Number);
+  const date = new Date(y, mo - 1, d); // Local midnight — no timezone shift
+  return date.toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric',
+    month: 'long', year: 'numeric'
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('bookError');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+</script>
+</body>
+</html>
