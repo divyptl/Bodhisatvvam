@@ -461,15 +461,13 @@ function login() {
 
 function logout() {
   sessionStorage.removeItem('bdh_admin');
+  sessionStorage.removeItem('bdh_pass');
   location.reload();
 }
 
-// Check if already logged in this session
-if (sessionStorage.getItem('bdh_admin') === 'true') {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('dashboard').style.display = 'block';
-  loadOrders();
-}
+// Note: We intentionally don't auto-restore session on page load
+// because bdh_pass is cleared on logout and would cause 401 errors.
+// User must log in again each page load — sessionStorage persists within the tab.
 
 
 // ── LOAD ORDERS FROM GOOGLE SHEET ─────────────────────────
