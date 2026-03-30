@@ -453,6 +453,39 @@ app.post('/api/admin/orders', async (req, res) => {
     }
 });
 
+
+// ── ADMIN: Update order status ────────────────────────────
+app.post('/api/admin/update-status', async (req, res) => {
+    const { password, orderId, status } = req.body;
+
+    const ADMIN_PASS = process.env.ADMIN_PASS;
+    if (!ADMIN_PASS || password !== ADMIN_PASS) {
+        return res.status(401).json({ success: false, message: 'Incorrect password.' });
+    }
+
+    const validStatuses = ['New Order', 'Paid', 'Dispatched', 'Delivered', 'Cancelled'];
+    if (!orderId || !validStatuses.includes(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid order ID or status.' });
+    }
+
+    if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_SECRET) {
+        return res.status(503).json({ success: false, message: 'Google Script not configured.' });
+    }
+
+    try {
+        const response = await axios.post(
+            GOOGLE_SCRIPT_URL,
+            { secret: GOOGLE_SCRIPT_SECRET, action: 'updateStatus', orderId, status },
+            { headers: { 'Content-Type': 'application/json' }, timeout: 25000 }
+        );
+        console.log(`✅ Status updated → ${orderId} : ${status}`);
+        return res.status(200).json(response.data);
+    } catch (err) {
+        console.error('Status update error:', err.message);
+        return res.status(500).json({ success: false, message: 'Could not update status.' });
+    }
+});
+
 // -- 8. HEALTH CHECK ------------------------------------------------------
 app.get('/health', (req, res) => {
     res.status(200).json({
