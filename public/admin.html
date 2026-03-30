@@ -432,7 +432,7 @@
 // ⚠️ Replace with your actual Render URL
 const API_BASE       = 'https://bodhisatvvam.onrender.com';
 // ⚠️ Set this to the same value as ADMIN_PASS in Render environment variables
-const ADMIN_PASSWORD = 'Divy@969P'; // Change this + set ADMIN_PASS in Render
+const ADMIN_PASSWORD = 'bodhisatvvam2024'; // Change this + set ADMIN_PASS in Render
 
 // ── STATE ─────────────────────────────────────────────────
 let allOrders   = [];
@@ -561,9 +561,20 @@ function renderOrders(orders) {
       <td><div class="items-cell">${o.items || '—'}</div></td>
       <td><div class="total-cell">${o.total || '—'}</div></td>
       <td>
-        <span class="status-badge status-${o.status || 'New Order'}">
-          ${o.status || 'New Order'}
-        </span>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+          <span class="status-badge status-${(o.status || 'New Order').replace(' ','-')}">
+            ${o.status || 'New Order'}
+          </span>
+          <select class="status-select"
+            onchange="updateStatus('${o.orderId}', this.value, this)"
+            title="Update status">
+            <option value="New Order"  ${(o.status||'') === 'New Order'  ? 'selected' : ''}>New Order</option>
+            <option value="Paid"       ${(o.status||'') === 'Paid'       ? 'selected' : ''}>Paid</option>
+            <option value="Dispatched" ${(o.status||'') === 'Dispatched' ? 'selected' : ''}>Dispatched</option>
+            <option value="Delivered"  ${(o.status||'') === 'Delivered'  ? 'selected' : ''}>Delivered</option>
+            <option value="Cancelled"  ${(o.status||'') === 'Cancelled'  ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </div>
       </td>
     </tr>
   `).join('');
@@ -626,6 +637,46 @@ function formatDate(dateStr) {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
+}
+
+// ── UPDATE ORDER STATUS ───────────────────────────────────
+async function updateStatus(orderId, newStatus, selectEl) {
+  const pass = sessionStorage.getItem('bdh_pass') || '';
+  const originalValue = selectEl.getAttribute('data-original') || newStatus;
+  selectEl.setAttribute('data-original', newStatus);
+  selectEl.disabled = true;
+
+  try {
+    const res  = await fetch(`${API_BASE}/api/admin/update-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass, orderId, status: newStatus }),
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      // Update the badge visually without re-fetching all orders
+      const row    = selectEl.closest('tr');
+      const badge  = row.querySelector('.status-badge');
+      if (badge) {
+        badge.textContent  = newStatus;
+        badge.className    = `status-badge status-${newStatus.replace(' ', '-')}`;
+      }
+      // Update local data
+      const order = allOrders.find(o => o.orderId === orderId);
+      if (order) order.status = newStatus;
+      updateStats();
+      showToast(`✅ ${orderId} → ${newStatus}`);
+    } else {
+      showToast('❌ ' + (data.message || 'Update failed'));
+      selectEl.value = originalValue; // Revert
+    }
+  } catch (err) {
+    showToast('❌ Connection failed');
+    selectEl.value = originalValue;
+  } finally {
+    selectEl.disabled = false;
+  }
 }
 
 function showToast(msg) {
