@@ -1,27 +1,40 @@
 // ═══════════════════════════════════════════════════════════
-//  Bodhisatvvam — Backend Server v5 (Final Patch)
+//  Bodhisatvvam -- Backend Server v3 (Razorpay Integration)
+//  New in this version:
+//    ✅ POST /api/create-order  -- creates Razorpay order, returns order_id + key
+//    ✅ POST /api/verify-payment -- verifies signature, then logs to Sheet + WhatsApp
+//    ✅ Razorpay signature verification (HMAC-SHA256) -- prevents fake payment claims
+//    ✅ All previous hardening retained (CORS, rate limit, validation, sanitized logs)
 // ═══════════════════════════════════════════════════════════
 
 const express   = require('express');
 const axios     = require('axios');
 const path      = require('path');
 const cors      = require('cors');
-const crypto    = require('crypto');
+const crypto    = require('crypto'); // Built-in Node.js -- no install needed
 const rateLimit = require('express-rate-limit');
-const helmet    = require('helmet');
 const Razorpay  = require('razorpay');
 
 const app = express();
+
+// Trust Render's proxy — required for express-rate-limit to work correctly
+// Render sits behind a load balancer that sets X-Forwarded-For
 app.set('trust proxy', 1);
 
-// ── 1. ENV SAFETY CHECK ──────────────────────────────────────
+// -- 1. ENV SAFETY CHECK -------------------------------------------
 const REQUIRED_ENV = [
-    'WHATSAPP_TOKEN','PHONE_NUMBER_ID','GOOGLE_SCRIPT_URL',
-    'GOOGLE_SCRIPT_SECRET','ALLOWED_ORIGIN','RAZORPAY_KEY_ID','RAZORPAY_KEY_SECRET',
+    'WHATSAPP_TOKEN',
+    'PHONE_NUMBER_ID',
+    'GOOGLE_SCRIPT_URL',
+    'GOOGLE_SCRIPT_SECRET',
+    'ALLOWED_ORIGIN',
+    'RAZORPAY_KEY_ID',
+    'RAZORPAY_KEY_SECRET',
 ];
+
 const missingEnv = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missingEnv.length > 0) {
-    console.warn(`⚠️ Missing env vars: [${missingEnv.join(', ')}]. Related features disabled.`);
+    console.warn(`⚠️  Missing env vars: [${missingEnv.join(', ')}]. Related features disabled.`);
 }
 
 const WHATSAPP_TOKEN       = process.env.WHATSAPP_TOKEN;
@@ -32,117 +45,98 @@ const ALLOWED_ORIGIN       = process.env.ALLOWED_ORIGIN || '*';
 const RAZORPAY_KEY_ID      = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET  = process.env.RAZORPAY_KEY_SECRET;
 
-// ── 2. RAZORPAY CLIENT ───────────────────────────────────────
+// -- 2. RAZORPAY CLIENT ---------------------------------------------
 const razorpay = (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET)
     ? new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET })
     : null;
 
-// ── 3. MIDDLEWARE ────────────────────────────────────────────
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc:    ["'self'"],
-            scriptSrc:     ["'self'", "'unsafe-inline'", "https://*.razorpay.com", "https://fonts.googleapis.com"],
-            scriptSrcAttr: ["'unsafe-inline'"], 
-            styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.razorpay.com"],
-            fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://*.razorpay.com"],
-            imgSrc:        ["'self'", "data:", "https:"],
-            connectSrc:    ["'self'", "https://*.razorpay.com", "https://bodhisatvvam.onrender.com"],
-            frameSrc:      ["'self'", "https://*.razorpay.com", "https:"],
-        },
-    },
-    crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: false,
-}));
-
-const allowedOrigins = ALLOWED_ORIGIN === '*' ? ['*'] : ALLOWED_ORIGIN.split(',').map(o => o.trim());
+// -- 3. MIDDLEWARE --------------------------------------------------------
+// Supports single origin, comma-separated list, or * wildcard
+const allowedOrigins = ALLOWED_ORIGIN === '*'
+    ? ['*']
+    : ALLOWED_ORIGIN.split(',').map(o => o.trim());
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        console.warn(`⚠️ CORS rejected origin: ${origin}`);
-        return callback(null, false);
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes('*')) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, origin);
+        callback(new Error('CORS blocked: ' + origin));
     },
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
     credentials: false,
 }));
-
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── 4. RATE LIMITERS ─────────────────────────────────────────
+// -- 4. RATE LIMITERS -----------------------------------------------------
 const orderLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 10, // slightly higher since create + verify = 2 calls per order
     message: { success: false, message: 'Too many requests. Please wait 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
 
-// ── 5. PRODUCT CATALOG ───────────────────────────────────────
-const PRODUCT_CATALOG = {
-    101:599, 102:599, 103:599, 104:599, 105:599, 106:599, 107:599, 108:599, 109:599, 110:599,
-    111:599, 112:599, 113:599, 114:599, 115:599, 116:599, 117:599, 118:599, 119:599, 120:599,
-    121:599, 122:599, 123:599, 124:599, 125:599, 126:599, 127:599, 128:599, 129:599, 130:599,
-    131:599, 132:599, 133:599, 134:599, 135:599, 136:599, 137:599, 138:599, 139:599, 140:599,
-    141:599, 142:599, 143:599, 144:599, 145:599, 146:599, 147:599,
-    201:2499, 202:2499, 203:2499, 204:2499, 205:2499, 206:2499, 207:2499, 208:2499, 209:2499, 210:2499,
-    301:999,  302:1499, 303:1499, 304:1499, 305:999,  306:1499, 307:999,  308:999,  309:999,  310:999,
-    311:1499, 312:1499, 313:1499, 314:1499, 315:1499, 316:1499, 317:1499, 318:999,  319:1499, 320:1499,
-    321:1499, 322:1499, 323:4499, 324:999,  325:999,  326:1499, 327:1499, 328:999,  329:1499, 330:1499,
-    331:1499, 332:1499, 333:1499, 334:1499, 335:1499, 336:1499, 337:999,  338:999,  339:1499,
-    1000:1799,
-};
-
-// ── 6. HELPERS ───────────────────────────────────────────────
+// -- 5. HELPERS -----------------------------------------------------------
 function generateOrderId() {
     const ts  = Date.now().toString(36).toUpperCase();
     const rnd = Math.floor(1000 + Math.random() * 9000);
     return `#BDH-${ts}-${rnd}`;
 }
 
-function normalizeIndianPhone(phone) {
-    const digits = String(phone).replace(/\D/g, '');
-    if (digits.length === 10) return '91' + digits;
-    if (digits.length === 12 && digits.startsWith('91')) return digits;
-    if (digits.length === 13 && digits.startsWith('091')) return digits.slice(1);
-    return digits;
+function validatePhone(phone) {
+    if (!phone || typeof phone !== 'string') return false;
+    const digits = phone.replace(/\D/g, '');
+    return digits.length >= 10 && digits.length <= 13;
 }
 
-function formatItemsForSheet(items) {
-    if (!Array.isArray(items)) return String(items);
-    return items.map(i => {
-        let str = `${i.name} (x${i.qty})`;
-        if (i.notes) str += ` [${i.notes}]`;
-        return str;
-    }).join(', ');
+function validateOrderInput({ name, phone, address, items, total }) {
+    const errors = [];
+    if (!name || typeof name !== 'string' || name.trim().length < 2)
+        errors.push('Name must be at least 2 characters.');
+    if (!validatePhone(phone))
+        errors.push('Please provide a valid 10-digit phone number.');
+    if (!address || typeof address !== 'string' || address.trim().length < 10)
+        errors.push('Address must be at least 10 characters.');
+    if (!items || (Array.isArray(items) && items.length === 0))
+        errors.push('Order must contain at least one item.');
+    const parsedTotal = parseFloat(String(total).replace(/[^0-9.]/g, ''));
+    if (isNaN(parsedTotal) || parsedTotal <= 0)
+        errors.push('Order total is invalid.');
+    return errors;
 }
 
-// 🚨 Added missing WhatsApp formatter
 function formatItemsForWhatsApp(items) {
-    if (!Array.isArray(items)) return String(items);
-    return items.map(i => {
-        let str = `- ${i.name} x${i.qty}`;
-        if (i.notes) str += `\n  _Note: ${i.notes}_`;
-        return str;
-    }).join('\n');
+    if (Array.isArray(items)) {
+        return items.map(i => `- ${i.name} x${i.qty} @ Rs.${i.price}`).join('\n');
+    }
+    return String(items);
+}
+
+// Converts "₹1,599.00" or 1599 → integer paise (Razorpay uses paise)
+function toPaise(total) {
+    const num = parseFloat(String(total).replace(/[^0-9.]/g, ''));
+    return Math.round(num * 100); // ₹599.00 → 59900 paise
 }
 
 async function pushToSheet(payload, attempt = 1) {
     if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_SECRET) return false;
     try {
-        const sheetPayload = { ...payload, items: formatItemsForSheet(payload.items) };
         await axios.post(
             GOOGLE_SCRIPT_URL,
-            { secret: GOOGLE_SCRIPT_SECRET, ...sheetPayload },
+            { secret: GOOGLE_SCRIPT_SECRET, ...payload },
             { headers: { 'Content-Type': 'application/json' }, timeout: 25000 }
         );
+        console.log(`✅ Sheet updated → ${payload.orderId}`);
         return true;
     } catch (err) {
+        const status = err?.response?.status || 'no-response';
+        console.error(`❌ Sheet error (attempt ${attempt}) → HTTP ${status}: ${err.message}`);
+        // Retry once after 3 seconds if it timed out
         if (attempt === 1 && err.code === 'ECONNABORTED') {
+            console.log(`   Retrying sheet update in 3s...`);
             await new Promise(r => setTimeout(r, 3000));
             return pushToSheet(payload, 2);
         }
@@ -150,160 +144,336 @@ async function pushToSheet(payload, attempt = 1) {
     }
 }
 
-async function sendWhatsApp(name, phone, orderId, items, total) {
-    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return false;
+async function sendWhatsApp(name, phone, orderId, items, total, address) {
+    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return;
     try {
-        const formattedItems = formatItemsForWhatsApp(items);
-        const payload = {
-            messaging_product: 'whatsapp',
-            to: phone,
-            type: 'template',
-            template: {
-                name: 'order_confirmation', 
-                language: { code: 'en' },
-                components: [
-                    {
-                        type: 'body',
-                        parameters: [
-                            { type: 'text', text: name },                 
-                            { type: 'text', text: orderId },              
-                            { type: 'text', text: formattedItems },       
-                            { type: 'text', text: total },                 
-                            { type: 'text', text: customerNotes || 'None provided' } 
-                        ]
-                    }
-                ]
-            }
-        };
+        const body =
+            `*Namaste ${name},* 🙏\n\n` +
+            `Your payment was successful! ✨\n\n` +
+            `*Order Confirmed (${orderId})*\n` +
+            `--------------------------\n` +
+            `${formatItemsForWhatsApp(items)}\n` +
+            `--------------------------\n` +
+            `*Total Paid:* ${total}\n` +
+            `*Delivery to:* ${address}\n\n` +
+            `We will dispatch your order shortly and keep you updated here.\n\n` +
+            `_Empower Your Life_ 🌸\n` +
+            `-- Shree Bodhisatvvam Team`;
 
         const waResponse = await axios.post(
             `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
-            payload,
+            { messaging_product: 'whatsapp', to: phone.startsWith('+') ? phone : '+' + phone, type: 'text', text: { body } },
             { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
         );
-        console.log(`✅ WhatsApp sent → ${orderId} (to: ${phone})`);
-        return true;
+        // Log the full Meta response so we can see exactly what happened
+        console.log(`✅ WhatsApp sent → ${orderId}`);
+        console.log(`   Meta response status : ${waResponse.status}`);
+        console.log(`   Meta response data   : ${JSON.stringify(waResponse.data)}`);
+        console.log(`   Sent to number       : ${phone}`);
+        console.log(`   Phone Number ID used : ${PHONE_NUMBER_ID}`);
     } catch (err) {
-        const msg = err?.response?.data?.error?.message || err.message;
-        console.error(`❌ WhatsApp error: ${msg}`);
-        return false;
+        const code = err?.response?.data?.error?.code    || 'unknown';
+        const type = err?.response?.data?.error?.type    || 'unknown';
+        const msg  = err?.response?.data?.error?.message || err.message;
+        console.error(`❌ WhatsApp error → Code ${code} [${type}]: ${msg}`);
+        console.error(`   Full error response: ${JSON.stringify(err?.response?.data)}`);
+        console.error(`   Attempted to send to: ${phone}`);
+        console.error(`   Phone Number ID: ${PHONE_NUMBER_ID}`);
     }
 }
 
-// ── 7. ROUTE: CREATE RAZORPAY ORDER ──────────────────────────
+// -- 6. ROUTE: CREATE RAZORPAY ORDER -------------------------------
+// Called when customer clicks "Pay Now" -- before payment happens.
+// Creates a Razorpay order and returns the order_id to the frontend.
 app.post('/api/create-order', orderLimiter, async (req, res) => {
+    const { name, phone, address, items, total } = req.body;
+
+    const errors = validateOrderInput({ name, phone, address, items, total });
+    if (errors.length > 0) {
+        return res.status(400).json({ success: false, message: errors.join(' ') });
+    }
+
+    if (!razorpay) {
+        return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
+    }
+
+    const bodhiOrderId = generateOrderId(); // Our internal ID
+    const amountPaise  = toPaise(total);
+
+    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${amountPaise / 100}`);
+
     try {
-        const body = req.body || {};
-        const { name, phone, address, items, customerNotes } = body;
-
-        if (!name || name.trim().length < 2) return res.status(400).json({ success: false, message: 'Name must be at least 2 characters.' });
-        
-        const phoneDigits = (phone || '').replace(/\D/g, '');
-        if (phoneDigits.length < 10 || phoneDigits.length > 13) return res.status(400).json({ success: false, message: 'Valid 10-digit phone required.' });
-        if (!address || address.trim().length < 5) return res.status(400).json({ success: false, message: 'Valid address required.' });
-        if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ success: false, message: 'Order must contain items.' });
-
-        let calculatedTotal = 0;
-        for (const item of items) {
-            const catalogPrice = PRODUCT_CATALOG[item.id];
-            if (!catalogPrice) return res.status(400).json({ success: false, message: `Unknown product ID: ${item.id}.` });
-            calculatedTotal += catalogPrice * (parseInt(item.qty, 10) || 1);
-        }
-        
-        const amountPaise = Math.round(calculatedTotal * 100);
-        if (!razorpay) return res.status(503).json({ success: false, message: 'Payment not configured.' });
-
-        const bodhiOrderId = generateOrderId();
-        const sanitizedPhone = normalizeIndianPhone(phone);
-
         const rzpOrder = await razorpay.orders.create({
-            amount: amountPaise,
+            amount:   amountPaise,
             currency: 'INR',
-            receipt: bodhiOrderId,
-            notes: { customer_name: name.trim(), customer_phone: sanitizedPhone, bdh_order_id: bodhiOrderId },
+            receipt:  bodhiOrderId, // Links Razorpay order to our ID
+            notes: {
+                customer_name:    name,
+                customer_phone:   phone.replace(/\D/g, ''),
+                delivery_address: address,
+                bdh_order_id:     bodhiOrderId,
+            },
         });
 
+        console.log(`✅ Razorpay order created → ${rzpOrder.id}`);
+
+        // Return everything the frontend Razorpay SDK needs
         return res.status(200).json({
-            success: true,
-            razorpayOrderId: rzpOrder.id,
-            bodhiOrderId,
-            amount: amountPaise,
-            currency: 'INR',
-            keyId: RAZORPAY_KEY_ID,
-            prefill: { name: name.trim(), contact: sanitizedPhone },
+            success:       true,
+            razorpayOrderId: rzpOrder.id,     // rzp_order_xxx -- used by the JS SDK
+            bodhiOrderId,                      // #BDH-xxx -- shown to customer
+            amount:        amountPaise,
+            currency:      'INR',
+            keyId:         RAZORPAY_KEY_ID,   // Public key -- safe to send to frontend
+            prefill: {
+                name,
+                contact: phone.replace(/\D/g, ''),
+            },
         });
 
     } catch (err) {
-        console.error(`❌ Create order error: ${err.message}`);
+        console.error(`❌ Razorpay order creation failed: ${err.message}`);
+        return res.status(500).json({ success: false, message: 'Could not initiate payment. Please try again.' });
+    }
+});
+
+// -- 7. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
+// Called AFTER Razorpay payment succeeds on the frontend.
+// Verifies the HMAC signature (proves payment is real), then logs + notifies.
+app.post('/api/verify-payment', orderLimiter, async (req, res) => {
+    const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        // Order details (sent again so we can log them)
+        bodhiOrderId,
+        name,
+        phone,
+        address,
+        items,
+        total,
+    } = req.body;
+
+    // 7a. Verify Razorpay HMAC signature
+    // This is the critical security step -- without it anyone could fake a payment
+    const expectedSignature = crypto
+        .createHmac('sha256', RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+        console.error(`❌ Signature mismatch for ${bodhiOrderId} -- possible fraud attempt`);
+        return res.status(400).json({ success: false, message: 'Payment verification failed.' });
+    }
+
+    console.log(`✅ Payment verified → ${bodhiOrderId} | Razorpay: ${razorpay_payment_id}`);
+
+    const sanitizedPhone = phone.replace(/\D/g, '');
+
+    // 7b. Log to Google Sheet (status = "Paid")
+    await pushToSheet({
+        orderId: bodhiOrderId,
+        name,
+        phone:   sanitizedPhone,
+        address,
+        items,
+        total,
+        status:  'Paid', // Override default "New Order" since payment is confirmed
+        paymentId: razorpay_payment_id,
+    });
+
+    // 7c. Send WhatsApp confirmation
+    await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address);
+
+    // 7d. Return success to frontend
+    return res.status(200).json({
+        success: true,
+        orderId: bodhiOrderId,
+        message: 'Payment confirmed! Order placed successfully.',
+    });
+});
+
+
+// ═══════════════════════════════════════════════════════════
+//  BOOKING SYSTEM ROUTES
+// ═══════════════════════════════════════════════════════════
+
+// ── GET: Fetch booked slots ───────────────────────────────
+app.get('/api/bookings/slots', async (req, res) => {
+    if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_SECRET) {
+        return res.status(200).json({ success: true, slots: {} });
+    }
+    try {
+        const response = await axios.get(
+            `${GOOGLE_SCRIPT_URL}?action=getBookedSlots`,
+            { timeout: 15000 }
+        );
+        return res.status(200).json({ success: true, slots: response.data.slots || {} });
+    } catch (err) {
+        console.error('Fetch slots error:', err.message);
+        return res.status(200).json({ success: true, slots: {} });
+    }
+});
+
+// ── POST: Create Razorpay order for booking ───────────────
+app.post('/api/create-booking', orderLimiter, async (req, res) => {
+    const { name, phone, sessionName, sessionId, date, slot, price } = req.body;
+    if (!name || !phone || !sessionId || !date || !slot || !price)
+        return res.status(400).json({ success: false, message: 'Missing required fields.' });
+    if (!razorpay)
+        return res.status(503).json({ success: false, message: 'Payment system not configured.' });
+
+    const bookingId   = '#BDHB-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
+    const amountPaise = Math.round(price * 100);
+    console.log(`📅 Creating booking | ${bookingId} | ${sessionName} | ${date} ${slot}`);
+
+    try {
+        const rzpOrder = await razorpay.orders.create({
+            amount: amountPaise, currency: 'INR', receipt: bookingId,
+            notes: { customer_name: name, session: sessionName, date, slot },
+        });
+        return res.status(200).json({
+            success: true, razorpayOrderId: rzpOrder.id,
+            bookingId, amount: amountPaise, currency: 'INR', keyId: RAZORPAY_KEY_ID,
+        });
+    } catch (err) {
+        console.error('Booking Razorpay error:', err.message);
         return res.status(500).json({ success: false, message: 'Could not initiate payment.' });
     }
 });
 
-// ── 8. ROUTE: VERIFY PAYMENT + FULFIL ORDER ──────────────────
-app.post('/api/verify-payment', orderLimiter, async (req, res) => {
+// ── POST: Verify payment + confirm booking ────────────────
+app.post('/api/verify-booking', orderLimiter, async (req, res) => {
+    const {
+        razorpay_order_id, razorpay_payment_id, razorpay_signature,
+        bookingId, name, phone, email, notes,
+        sessionId, sessionName, date, slot, price,
+    } = req.body;
+
+    const expectedSig = crypto
+        .createHmac('sha256', RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+
+    if (expectedSig !== razorpay_signature) {
+        console.error(`Booking signature mismatch -- ${bookingId}`);
+        return res.status(400).json({ success: false, message: 'Payment verification failed.' });
+    }
+
+    console.log(`✅ Booking verified --> ${bookingId}`);
+    const sanitizedPhone = phone.replace(/\D/g, '');
+
+    // Log to Google Sheet
+    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_SECRET) {
+        try {
+            await axios.post(GOOGLE_SCRIPT_URL, {
+                secret: GOOGLE_SCRIPT_SECRET, action: 'addBooking',
+                bookingId, name, phone: sanitizedPhone, email: email || '',
+                sessionId, sessionName, date, slot,
+                total: 'Rs.' + price, notes: notes || '',
+                paymentId: razorpay_payment_id, status: 'Confirmed',
+            }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
+            console.log(`✅ Booking logged --> ${bookingId}`);
+        } catch (err) {
+            console.error(`Booking sheet error: ${err.message}`);
+        }
+    }
+
+    // WhatsApp to customer
+    if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
+        const toNum = '+' + sanitizedPhone;
+        try {
+            const customerMsg =
+                `*Namaste ${name},* 🙏\n\n` +
+                `Your healing session is confirmed! ✨\n\n` +
+                `*Booking ID:* ${bookingId}\n` +
+                `*Session:* ${sessionName}\n` +
+                `*Date:* ${date}\n` +
+                `*Time:* ${slot} IST\n` +
+                `*Mode:* Online Video Call\n` +
+                `*Paid:* Rs.${price}\n\n` +
+                `Neepa will send you the video call link at least 15 minutes before your session.\n\n` +
+                `_Empower Your Life_ 🌸\n-- Shree Bodhisatvvam`;
+            await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+                { messaging_product: 'whatsapp', to: toNum, type: 'text', text: { body: customerMsg } },
+                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+            );
+            console.log(`✅ Customer WA sent --> ${bookingId}`);
+        } catch (err) { console.error(`Customer WA error: ${err.message}`); }
+
+        // WhatsApp to Neepa
+        try {
+            const neepaPhone = '+' + (process.env.NEEPA_WHATSAPP || '919737171090').replace(/\D/g, '');
+            const neepaMsg =
+                `*New Booking!* 📅\n\n` +
+                `*ID:* ${bookingId}\n` +
+                `*Session:* ${sessionName}\n` +
+                `*Customer:* ${name} (+${sanitizedPhone})\n` +
+                `*Date:* ${date} at ${slot} IST\n` +
+                `*Paid:* Rs.${price}\n` +
+                (notes ? `*Notes:* ${notes}` : '') +
+                `\n\nPlease send the video call link to the customer before the session.`;
+            await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+                { messaging_product: 'whatsapp', to: neepaPhone, type: 'text', text: { body: neepaMsg } },
+                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+            );
+            console.log(`✅ Neepa WA sent --> ${bookingId}`);
+        } catch (err) { console.error(`Neepa WA error: ${err.message}`); }
+    }
+
+    return res.status(200).json({ success: true, bookingId, message: 'Booking confirmed!' });
+});
+
+
+// ── ADMIN: Fetch orders (proxies Google Sheet) ────────────
+// admin.html calls this instead of Google Script directly
+// so CSP doesn't block it (Google Script is server-to-server here)
+app.post('/api/admin/orders', async (req, res) => {
+    const { password } = req.body;
+
+    // Check admin password
+    const ADMIN_PASS = process.env.ADMIN_PASS;
+    if (!ADMIN_PASS || password !== ADMIN_PASS) {
+        return res.status(401).json({ success: false, message: 'Incorrect password.' });
+    }
+
+    if (!GOOGLE_SCRIPT_URL) {
+        return res.status(503).json({ success: false, message: 'Google Script not configured.' });
+    }
+
     try {
-        const body = req.body || {};
-        const {
-            razorpay_order_id, razorpay_payment_id, razorpay_signature,
-            bodhiOrderId, name, phone, address, items, customerNotes
-        } = body;
-
-        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-            return res.status(400).json({ success: false, message: 'Missing verification fields.' });
-        }
-
-        const expectedSignature = crypto.createHmac('sha256', RAZORPAY_KEY_SECRET)
-            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-            .digest('hex');
-
-        if (expectedSignature !== razorpay_signature) {
-            return res.status(400).json({ success: false, message: 'Payment verification failed.' });
-        }
-
-        let secureTotal = 0;
-        if (Array.isArray(items)) {
-            for (const item of items) {
-                const catalogPrice = PRODUCT_CATALOG[item.id] || 0;
-                secureTotal += catalogPrice * (parseInt(item.qty, 10) || 0);
-            }
-        }
-        const secureTotalFormatted = '₹' + secureTotal.toFixed(2);
-        const sanitizedPhone = normalizeIndianPhone(phone || '');
-
-        const sheetOk = await pushToSheet({
-            orderId: bodhiOrderId, name, phone: sanitizedPhone,
-            address, items, total: secureTotalFormatted, status: 'Paid', paymentId: razorpay_payment_id, notes: customerNotes || "No notes provided"
-        });
-
-        // 🚨 Passed the items array properly
-        const waOk = await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, secureTotalFormatted);
-
-        if (!sheetOk && !waOk) {
-            console.error(`🚨 Backup: ${bodhiOrderId} | ${razorpay_payment_id} | ${secureTotalFormatted}`);
-        }
-
-        return res.status(200).json({ success: true, orderId: bodhiOrderId, message: 'Payment confirmed!' });
-
+        const response = await axios.get(
+            `${GOOGLE_SCRIPT_URL}?action=getOrders`,
+            { timeout: 25000 }
+        );
+        return res.status(200).json(response.data);
     } catch (err) {
-        return res.status(500).json({ success: false, message: 'Confirmation failed. Send us your payment ID via WhatsApp.' });
+        console.error('Admin orders fetch error:', err.message);
+        return res.status(500).json({ success: false, message: 'Could not fetch orders.' });
     }
 });
 
-// ── 9. GLOBAL ERROR HANDLERS ─────────────────────────────────
-app.use((err, req, res, next) => {
-    if (err.type === 'entity.parse.failed') return res.status(400).json({ success: false, message: 'Invalid body.' });
-    next(err);
+// -- 8. HEALTH CHECK ------------------------------------------------------
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status:    'ok',
+        service:   'Bodhisatvvam Backend',
+        timestamp: new Date().toISOString(),
+        env: {
+            whatsapp:    !!WHATSAPP_TOKEN,
+            googleSheet: !!GOOGLE_SCRIPT_URL,
+            razorpay:    !!razorpay,
+            cors:        ALLOWED_ORIGIN,
+        },
+    });
 });
 
-app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
-    console.error(`❌ Unhandled error: ${err.message}`);
-    return res.status(500).json({ success: false, message: 'Unexpected error occurred.' });
-});
-
-app.get('/api/ping', (req, res) => res.status(200).json({ ok: true }));
-app.get('/health', (req, res) => res.status(200).json({ status: 'ok', service: 'Bodhisatvvam Backend v5 Final' }));
-
+// -- 9. START -------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🌸 Server running on port ${PORT}`);
+    console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
+    console.log(`   Razorpay  : ${razorpay    ? '✅ configured' : '❌ not set'}`);
+    console.log(`   WhatsApp  : ${WHATSAPP_TOKEN ? '✅ configured' : '❌ not set'}`);
+    console.log(`   Sheet     : ${GOOGLE_SCRIPT_URL ? '✅ configured' : '❌ not set'}`);
+    console.log(`   CORS      : ${ALLOWED_ORIGIN}`);
 });
