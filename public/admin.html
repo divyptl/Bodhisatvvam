@@ -429,9 +429,10 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────
-
-const ADMIN_PASSWORD    = 'Divy@969P'; 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyoMmBkcgOd3imOws3qcJfRkgtzc2tTSYiZNbSNaxJi-UwpsuNj1nOLsEl2Tb0AT_h/exec';
+// ⚠️ Replace with your actual Render URL
+const API_BASE       = 'https://bodhisatvvam.onrender.com';
+// ⚠️ Set this to the same value as ADMIN_PASS in Render environment variables
+const ADMIN_PASSWORD = 'bodhisatvvam2024'; // Change this + set ADMIN_PASS in Render
 
 // ── STATE ─────────────────────────────────────────────────
 let allOrders   = [];
@@ -442,7 +443,9 @@ let sortDir     = -1; // -1 = descending (newest first)
 function login() {
   const input = document.getElementById('passwordInput').value;
   if (input === ADMIN_PASSWORD) {
+    // Store password in session to send with each request to backend
     sessionStorage.setItem('bdh_admin', 'true');
+    sessionStorage.setItem('bdh_pass', input);
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('dashboard').style.display = 'block';
     setTimeout(() => {
@@ -468,6 +471,7 @@ if (sessionStorage.getItem('bdh_admin') === 'true') {
   loadOrders();
 }
 
+
 // ── LOAD ORDERS FROM GOOGLE SHEET ─────────────────────────
 async function loadOrders() {
   const btn = document.getElementById('refreshBtn');
@@ -475,9 +479,13 @@ async function loadOrders() {
   document.getElementById('loadingOverlay').classList.add('active');
 
   try {
-    // Fetch orders from Google Sheet via Apps Script
-    const url = `${GOOGLE_SCRIPT_URL}?action=getOrders`;
-    const res  = await fetch(url);
+    // Fetch orders via backend proxy (avoids CSP issues with direct Google Script calls)
+    const pass = sessionStorage.getItem('bdh_pass') || '';
+    const res  = await fetch(`${API_BASE}/api/admin/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass }),
+    });
     const data = await res.json();
 
     if (data.success && data.orders) {
