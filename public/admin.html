@@ -429,9 +429,9 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────
-// ⚠️ Set these to your actual values
-const ADMIN_PASSWORD    = 'Divy@969P'; // Change this to something strong!
-const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL_HERE'; // Same URL as in server.js
+
+const ADMIN_PASSWORD    = process.env.ADMIN_PASS; 
+const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL;
 
 // ── STATE ─────────────────────────────────────────────────
 let allOrders   = [];
