@@ -144,7 +144,7 @@ async function pushToSheet(payload, attempt = 1) {
     }
 }
 
-async function sendWhatsApp(name, phone, orderId, items, total, address) {
+async function sendWhatsApp(name, phone, orderId, items, total, address, customerNotes) {
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return;
     try {
         const body =
