@@ -559,6 +559,11 @@ function renderCalendar() {
   const first = new Date(calYear, calMonth, 1).getDay();
   const days  = new Date(calYear, calMonth + 1, 0).getDate();
 
+  // 👇 NEW: Determine which slot list to check based on the selected session
+  const slotsToUse = (selectedSession && selectedSession.id === 'group_meditation') 
+                     ? MEDITATION_TIME_SLOTS 
+                     : REGULAR_TIME_SLOTS;
+
   let html = DAYS.map(d => `<div class="cal-day-label">${d}</div>`).join('');
 
   // Empty cells before first day
@@ -571,8 +576,10 @@ function renderCalendar() {
     const isSun   = date.getDay() === 0;
     const isTod   = date.toDateString() === today.toDateString();
     const isSel   = selectedDate === dateStr;
+    
+    // 👇 FIXED: Checking against slotsToUse.length instead of the old TIME_SLOTS.length
     const hasSlots = !isPast && !isSun &&
-      (bookedSlots[dateStr] || []).length < TIME_SLOTS.length;
+      (bookedSlots[dateStr] || []).length < slotsToUse.length;
 
     let cls = 'cal-day';
     if (isPast || isSun) cls += ' disabled';
