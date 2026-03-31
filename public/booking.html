@@ -332,7 +332,7 @@
 
 <!-- Nav -->
 <nav>
-  <a href="/" class="nav-logo">Bodhi<span>satvvam</span></a>
+  <a href="/" class="nav-logo">Shree Bodhisatvvam</a>
   <a href="/#products" class="nav-back">← Back to Shop</a>
 </nav>
 
@@ -467,66 +467,27 @@
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 // ⚠️ Replace with your actual Render URL
-const API_BASE = 'https://YOUR-RENDER-APP-NAME.onrender.com';
+const API_BASE = 'https://bodhisatvvam.onrender.com/';
 
 // Fixed time slots (IST) — edit these to match Neepa's availability
-const TIME_SLOTS = [
+// Split the slots so Group Meditation can show different times
+const REGULAR_TIME_SLOTS = [
   '09:00 AM', '10:00 AM', '11:00 AM',
   '12:00 PM', '02:00 PM', '03:00 PM',
   '04:00 PM', '05:00 PM', '06:00 PM',
   '07:00 PM',
 ];
+const MEDITATION_TIME_SLOTS = ['05:00 AM', '09:30 AM'];
 
-// Session types — match the healing sessions from products
+// Session types — Prices updated to 500, Group Meditation added
 const SESSIONS = [
-  {
-    id: 'chakra',
-    name: 'Chakra Healing & Balancing',
-    icon: '✨',
-    desc: 'Clear blockages and restore your energy centres.',
-    price: 2499,
-    duration: '60 min',
-  },
-  {
-    id: 'nlp',
-    name: 'NLP Therapy',
-    icon: '🧠',
-    desc: 'Rewire your mindset with Neuro-Linguistic Programming.',
-    price: 2499,
-    duration: '60 min',
-  },
-  {
-    id: 'pranic',
-    name: 'Pranic Healing',
-    icon: '💫',
-    desc: 'Advanced energy healing to restore your aura.',
-    price: 2499,
-    duration: '60 min',
-  },
-  {
-    id: 'aura',
-    name: 'Aura Cleaning & Energize',
-    icon: '🌿',
-    desc: 'Deep cleanse and energize your aura field.',
-    price: 2499,
-    duration: '60 min',
-  },
-  {
-    id: 'relationship',
-    name: 'Relationship Healing',
-    icon: '💖',
-    desc: 'Heal and restore harmony in your relationships.',
-    price: 2499,
-    duration: '60 min',
-  },
-  {
-    id: 'mental',
-    name: 'Mental & Emotional Healing',
-    icon: '🧘',
-    desc: 'Overcome anxiety, fear, stress and negativity.',
-    price: 2499,
-    duration: '60 min',
-  },
+  { id: 'chakra', name: 'Chakra Healing & Balancing', icon: '✨', desc: 'Clear blockages and restore your energy centres.', price: 500, duration: '60 min' },
+  { id: 'nlp', name: 'NLP Therapy', icon: '🧠', desc: 'Rewire your mindset with Neuro-Linguistic Programming.', price: 500, duration: '60 min' },
+  { id: 'pranic', name: 'Pranic Healing', icon: '💫', desc: 'Advanced energy healing to restore your aura.', price: 500, duration: '60 min' },
+  { id: 'aura', name: 'Aura Cleaning & Energize', icon: '🌿', desc: 'Deep cleanse and energize your aura field.', price: 500, duration: '60 min' },
+  { id: 'relationship', name: 'Relationship Healing', icon: '💖', desc: 'Heal and restore harmony in your relationships.', price: 500, duration: '60 min' },
+  { id: 'mental', name: 'Mental & Emotional Healing', icon: '🧘', desc: 'Overcome anxiety, fear, stress and negativity.', price: 500, duration: '60 min' },
+  { id: 'group_meditation', name: 'Group Meditation', icon: '🧘‍♂️', desc: 'Join any 1 batch (5:00-5:30 AM or 9:30-10:00 AM).', price: 100, duration: '30 min' },
 ];
 
 // ── STATE ─────────────────────────────────────────────────
@@ -578,8 +539,10 @@ function renderSessions() {
 
 function selectSession(id) {
   selectedSession = SESSIONS.find(s => s.id === id);
+  selectedSlot = null; 
   document.querySelectorAll('.session-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('sess-' + id).classList.add('selected');
+  if (selectedDate) renderSlots();
   updateSummary();
   document.querySelector('.booking-section').scrollIntoView({ behavior: 'smooth' });
 }
@@ -647,14 +610,20 @@ function selectDate(dateStr) {
 // ── SLOTS ─────────────────────────────────────────────────
 function renderSlots() {
   const container = document.getElementById('slotsContainer');
-  if (!selectedDate) {
-    container.innerHTML = `<div class="no-date-msg">Please select a date first</div>`;
+  if (!selectedSession) {
+    container.innerHTML = `<div class="no-date-msg">Please select a healing session above first.</div>`;
     return;
   }
-
+  if (!selectedDate) {
+    container.innerHTML = `<div class="no-date-msg">Please select a date first.</div>`;
+    return;
+  }
+  // Determine which list of times to show
+  const slotsToUse = selectedSession.id === 'group_meditation' ? MEDITATION_TIME_SLOTS : REGULAR_TIME_SLOTS;
   const booked = bookedSlots[selectedDate] || [];
+
   container.innerHTML = `<div class="slots-grid">` +
-    TIME_SLOTS.map(slot => {
+    slotsToUse.map(slot => {
       const isBooked = booked.includes(slot);
       const isSel    = selectedSlot === slot;
       let cls = 'slot-btn';
