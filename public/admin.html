@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bodhisatvvam — Admin</title>
+<title>Shree Bodhisatvvam — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -70,7 +70,6 @@
     transition: border-color 0.2s;
   }
   .login-input:focus { border-color: var(--gold); }
-  .login-input::placeholder { color: rgba(245,239,227,0.3); }
   .login-btn {
     width: 100%; padding: 14px;
     background: var(--amber); color: white;
@@ -90,11 +89,9 @@
 
   /* Top nav */
   .admin-nav {
-    background: var(--forest);
-    padding: 18px 40px;
+    background: var(--forest); padding: 18px 40px;
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.15);
   }
   .admin-nav-logo {
     font-family: 'Cormorant Garamond', serif;
@@ -104,10 +101,8 @@
   .admin-nav-logo span { color: var(--gold); font-style: italic; }
   .admin-nav-right { display: flex; align-items: center; gap: 20px; }
   .admin-tag {
-    font-size: 0.65rem; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--sage);
-    background: rgba(122,158,126,0.15);
-    padding: 4px 10px; border: 1px solid rgba(122,158,126,0.3);
+    font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--sage);
+    background: rgba(122,158,126,0.15); padding: 4px 10px; border: 1px solid rgba(122,158,126,0.3);
   }
   .logout-btn {
     background: transparent; border: 1px solid rgba(212,170,96,0.3);
@@ -120,216 +115,112 @@
 
   /* Stats bar */
   .stats-bar {
-    background: white;
-    border-bottom: 1px solid var(--cream-dark);
-    padding: 28px 40px;
     display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 1px; background: var(--cream-dark);
+    border-bottom: 1px solid var(--cream-dark);
   }
-  .stat-card {
-    background: white; padding: 24px 32px;
-    transition: background 0.2s;
-  }
+  .stat-card { background: white; padding: 24px 40px; transition: background 0.2s; }
   .stat-card:hover { background: var(--cream); }
-  .stat-label {
-    font-size: 0.68rem; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-light);
-    margin-bottom: 8px;
-  }
-  .stat-value {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 2.4rem; font-weight: 400;
-    color: var(--forest); line-height: 1;
-  }
+  .stat-label { font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-light); margin-bottom: 8px; }
+  .stat-value { font-family: 'Cormorant Garamond', serif; font-size: 2.4rem; font-weight: 400; color: var(--forest); line-height: 1; }
   .stat-sub { font-size: 0.75rem; color: var(--text-light); margin-top: 4px; }
+
+  /* Tabs */
+  .admin-tabs {
+    display: flex; gap: 8px; padding: 0 40px; margin-top: 24px;
+    border-bottom: 1px solid var(--cream-dark);
+  }
+  .admin-tab {
+    background: transparent; border: none; padding: 12px 24px; cursor: pointer;
+    font-family: 'Jost', sans-serif; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-light); font-weight: 500; border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .admin-tab.active { color: var(--forest); border-bottom-color: var(--forest); }
+  .admin-tab:hover:not(.active) { color: var(--text-mid); }
 
   /* Controls bar */
   .controls-bar {
-    padding: 20px 40px;
-    display: flex; align-items: center;
-    justify-content: space-between; gap: 16px;
-    background: var(--cream);
-    border-bottom: 1px solid var(--cream-dark);
+    padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
   }
   .controls-left { display: flex; gap: 12px; align-items: center; }
   .search-input {
     padding: 10px 16px; border: 1px solid var(--cream-dark);
     background: white; font-family: 'Jost', sans-serif;
-    font-size: 0.85rem; width: 260px; outline: none;
-    transition: border-color 0.2s;
+    font-size: 0.85rem; width: 300px; outline: none; transition: border-color 0.2s;
   }
   .search-input:focus { border-color: var(--forest); }
   .filter-select {
-    padding: 10px 16px; border: 1px solid var(--cream-dark);
-    background: white; font-family: 'Jost', sans-serif;
-    font-size: 0.82rem; outline: none; cursor: pointer;
-    color: var(--text-mid);
+    padding: 10px 16px; border: 1px solid var(--cream-dark); background: white;
+    font-family: 'Jost', sans-serif; font-size: 0.82rem; outline: none; cursor: pointer; color: var(--text-mid);
   }
   .refresh-btn {
-    padding: 10px 20px; background: var(--forest);
-    color: var(--cream); border: none;
-    font-family: 'Jost', sans-serif; font-size: 0.78rem;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    cursor: pointer; transition: background 0.2s;
-    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px; background: var(--forest); color: var(--cream); border: none;
+    font-family: 'Jost', sans-serif; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 8px;
   }
   .refresh-btn:hover { background: var(--forest-light); }
   .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .orders-count {
-    font-size: 0.8rem; color: var(--text-light);
-  }
+  .orders-count { font-size: 0.8rem; color: var(--text-light); }
 
   /* Orders table */
-  .table-wrap {
-    padding: 0 40px 40px;
-    overflow-x: auto;
-  }
-  table {
-    width: 100%; border-collapse: collapse;
-    background: white;
-    box-shadow: 0 1px 20px rgba(28,58,40,0.06);
-    margin-top: 24px;
-  }
-  thead tr {
-    background: var(--forest); color: var(--cream);
-  }
+  .table-wrap { padding: 0 40px 40px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 20px rgba(28,58,40,0.06); }
+  thead tr { background: var(--forest); color: var(--cream); }
   th {
-    padding: 14px 20px; text-align: left;
-    font-size: 0.68rem; letter-spacing: 0.15em;
-    text-transform: uppercase; font-weight: 500;
-    white-space: nowrap; cursor: pointer;
-    user-select: none; transition: background 0.2s;
+    padding: 14px 20px; text-align: left; font-size: 0.68rem; letter-spacing: 0.15em;
+    text-transform: uppercase; font-weight: 500; white-space: nowrap; cursor: pointer; user-select: none;
   }
   th:hover { background: var(--forest-light); }
-  th.sorted { color: var(--gold); }
-  td {
-    padding: 14px 20px; font-size: 0.85rem;
-    border-bottom: 1px solid var(--cream-dark);
-    color: var(--text-mid); vertical-align: top;
-  }
-  tr:last-child td { border-bottom: none; }
+  td { padding: 14px 20px; font-size: 0.85rem; border-bottom: 1px solid var(--cream-dark); color: var(--text-mid); vertical-align: top; }
   tr:hover td { background: var(--cream); }
 
-  .order-id {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 0.95rem; color: var(--forest);
-    font-weight: 600; white-space: nowrap;
-  }
+  .order-id { font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: var(--forest); font-weight: 600; white-space: nowrap; }
   .customer-name { font-weight: 500; color: var(--text-dark); }
-  .phone-link {
-    color: var(--amber); text-decoration: none;
-    transition: color 0.2s;
-  }
+  .phone-link { color: var(--amber); text-decoration: none; transition: color 0.2s; font-size: 0.75rem; display: block; margin-top: 4px; }
   .phone-link:hover { color: var(--forest); }
-  .items-cell {
-    max-width: 240px; font-size: 0.8rem;
-    line-height: 1.5; color: var(--text-light);
-  }
-  .total-cell {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.1rem; color: var(--forest);
-    font-weight: 500; white-space: nowrap;
-  }
+  .items-cell { max-width: 240px; font-size: 0.8rem; line-height: 1.5; color: var(--text-light); }
+  .total-cell { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--forest); font-weight: 500; white-space: nowrap; }
 
   /* Status badge */
-  .status-badge {
-    display: inline-block; padding: 4px 12px;
-    font-size: 0.65rem; letter-spacing: 0.12em;
-    text-transform: uppercase; font-weight: 600;
-    border-radius: 2px;
-  }
-  .status-Paid       { background: rgba(45,106,79,0.12);  color: var(--success); }
+  .status-badge { display: inline-block; padding: 4px 12px; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; border-radius: 2px; }
+  .status-Paid, .status-Confirmed { background: rgba(45,106,79,0.12); color: var(--success); }
   .status-New\ Order { background: rgba(196,124,58,0.12); color: var(--amber); }
-  .status-Dispatched { background: rgba(28,58,40,0.1);    color: var(--forest); }
-  .status-Delivered  { background: rgba(45,106,79,0.2);   color: var(--success); }
-  .status-Cancelled  { background: rgba(184,92,56,0.1);   color: var(--danger); }
+  .status-Dispatched { background: rgba(28,58,40,0.1); color: var(--forest); }
+  .status-Delivered  { background: rgba(45,106,79,0.2); color: var(--success); }
+  .status-Cancelled  { background: rgba(184,92,56,0.1); color: var(--danger); }
 
-  /* Status update dropdown -->*/
-  .status-select {
-    padding: 4px 8px; font-size: 0.75rem;
-    border: 1px solid var(--cream-dark);
-    background: white; color: var(--text-mid);
-    font-family: 'Jost', sans-serif;
-    cursor: pointer; outline: none;
-  }
+  .status-select { padding: 4px 8px; font-size: 0.75rem; border: 1px solid var(--cream-dark); background: white; color: var(--text-mid); font-family: 'Jost', sans-serif; cursor: pointer; outline: none; margin-top: 6px; }
 
   /* Empty / loading states */
-  .table-message {
-    text-align: center; padding: 80px 40px;
-    color: var(--text-light);
-  }
+  .table-message { text-align: center; padding: 80px 40px; color: var(--text-light); }
   .table-message-icon { font-size: 3rem; display: block; margin-bottom: 16px; }
-  .table-message-text { font-size: 0.9rem; }
 
-  /* Loading spinner overlay */
-  .loading-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(245,239,227,0.7);
-    backdrop-filter: blur(4px);
-    z-index: 500;
-    align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px;
-  }
+  /* Loading overlay */
+  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(245,239,227,0.7); backdrop-filter: blur(4px); z-index: 500; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
   .loading-overlay.active { display: flex; }
-  .spinner {
-    width: 40px; height: 40px;
-    border: 3px solid var(--cream-dark);
-    border-top-color: var(--amber);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  .loading-text {
-    font-size: 0.8rem; letter-spacing: 0.15em;
-    text-transform: uppercase; color: var(--text-light);
-  }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--cream-dark); border-top-color: var(--amber); border-radius: 50%; animation: spin 0.8s linear infinite; }
 
-  /* Toast notification -->*/
-  .toast-wrap {
-    position: fixed; bottom: 32px; right: 32px;
-    z-index: 9999; display: flex; flex-direction: column; gap: 8px;
-  }
-  .toast-msg {
-    background: var(--forest); color: var(--cream);
-    padding: 12px 20px; font-size: 0.82rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    transform: translateX(120%);
-    transition: transform 0.3s ease;
-  }
+  /* Toast */
+  .toast-wrap { position: fixed; bottom: 32px; right: 32px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast-msg { background: var(--forest); color: var(--cream); padding: 12px 20px; font-size: 0.82rem; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transform: translateX(120%); transition: transform 0.3s ease; }
   .toast-msg.show { transform: translateX(0); }
-
-  /* Responsive -->*/
-  @media (max-width: 900px) {
-    .stats-bar { grid-template-columns: 1fr 1fr; }
-    .admin-nav, .controls-bar, .table-wrap { padding-left: 20px; padding-right: 20px; }
-  }
-  @media (max-width: 600px) {
-    .stats-bar { grid-template-columns: 1fr; }
-    .controls-left { flex-wrap: wrap; }
-    .search-input { width: 100%; }
-  }
 </style>
 </head>
 <body>
 
-<!-- ── LOGIN SCREEN ── -->
 <div id="loginScreen">
   <div class="login-box">
-    <div class="login-logo">Bodhi<span>satvvam</span></div>
+    <div class="login-logo">Shree Bodhisatvvam</div>
     <div class="login-sub">Admin Dashboard</div>
-    <input type="password" id="passwordInput" class="login-input"
-           placeholder="Enter admin password"
-           onkeydown="if(event.key==='Enter') login()">
+    <input type="password" id="passwordInput" class="login-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter') login()">
     <button class="login-btn" onclick="login()">Enter Dashboard</button>
     <div class="login-error" id="loginError">Incorrect password. Please try again.</div>
   </div>
 </div>
 
-<!-- ── DASHBOARD ── -->
 <div id="dashboard">
-
-  <!-- Nav -->
   <nav class="admin-nav">
     <div class="admin-nav-logo">Bodhi<span>satvvam</span></div>
     <div class="admin-nav-right">
@@ -338,39 +229,40 @@
     </div>
   </nav>
 
-  <!-- Stats -->
   <div class="stats-bar">
     <div class="stat-card">
-      <div class="stat-label">Total Orders</div>
+      <div class="stat-label">Total Transactions</div>
       <div class="stat-value" id="statTotal">—</div>
-      <div class="stat-sub">All time</div>
+      <div class="stat-sub">Orders + Bookings</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Revenue</div>
+      <div class="stat-label">Total Revenue</div>
       <div class="stat-value" id="statRevenue">—</div>
-      <div class="stat-sub">Paid orders only</div>
+      <div class="stat-sub">Paid items only</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Today's Orders</div>
+      <div class="stat-label">Today's Activity</div>
       <div class="stat-value" id="statToday">—</div>
       <div class="stat-sub" id="statTodayDate">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Pending</div>
+      <div class="stat-label">Pending Action</div>
       <div class="stat-value" id="statPending">—</div>
-      <div class="stat-sub">Awaiting dispatch</div>
+      <div class="stat-sub">To dispatch / Upcoming</div>
     </div>
   </div>
 
-  <!-- Controls -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" id="tab-orders" onclick="switchTab('orders')">🛍️ Shop Orders</button>
+    <button class="admin-tab" id="tab-bookings" onclick="switchTab('bookings')">🌿 Healing Sessions</button>
+  </div>
+
   <div class="controls-bar">
     <div class="controls-left">
-      <input type="text" id="searchInput" class="search-input"
-             placeholder="🔍 Search by name, phone, order ID..."
-             oninput="filterOrders()">
-      <select class="filter-select" id="statusFilter" onchange="filterOrders()">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by name, phone, or ID..." oninput="filterData()">
+      <select class="filter-select" id="statusFilter" onchange="filterData()">
         <option value="">All Statuses</option>
-        <option value="Paid">Paid</option>
+        <option value="Paid">Paid / Confirmed</option>
         <option value="New Order">New Order</option>
         <option value="Dispatched">Dispatched</option>
         <option value="Delivered">Delivered</option>
@@ -378,80 +270,78 @@
       </select>
     </div>
     <div style="display:flex;align-items:center;gap:16px">
-      <span class="orders-count" id="ordersCount"></span>
-      <button class="refresh-btn" id="refreshBtn" onclick="loadOrders()">
+      <span class="orders-count" id="itemCountDisplay"></span>
+      <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="23 4 23 10 17 10"></polyline>
           <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-        </svg>
-        Refresh
+        </svg> Refresh
       </button>
     </div>
   </div>
 
-  <!-- Table -->
-  <div class="table-wrap">
+  <div class="table-wrap" id="ordersWrap">
     <table id="ordersTable">
       <thead>
         <tr>
           <th onclick="sortBy('date')">Date ↕</th>
           <th onclick="sortBy('orderId')">Order ID ↕</th>
           <th>Customer</th>
-          <th>Phone</th>
           <th>Items</th>
           <th onclick="sortBy('total')">Total ↕</th>
           <th>Status</th>
         </tr>
       </thead>
       <tbody id="ordersBody">
-        <tr>
-          <td colspan="7">
-            <div class="table-message">
-              <span class="table-message-icon">✨</span>
-              <div class="table-message-text">Loading orders...</div>
-            </div>
-          </td>
-        </tr>
+        <tr><td colspan="6"><div class="table-message"><span class="table-message-icon">✨</span><div class="table-message-text">Loading orders...</div></div></td></tr>
       </tbody>
+    </table>
+  </div>
+
+  <div class="table-wrap" id="bookingsWrap" style="display:none;">
+    <table id="bookingsTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('date')">Date Booked ↕</th>
+          <th onclick="sortBy('bookingId')">Booking ID ↕</th>
+          <th>Customer</th>
+          <th>Session Details</th>
+          <th>Schedule</th>
+          <th onclick="sortBy('total')">Total ↕</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="bookingsBody"></tbody>
     </table>
   </div>
 
 </div>
 
-<!-- Loading overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="loading-text">Loading orders...</div>
-</div>
-
-<!-- Toast container -->
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div class="loading-text">Syncing data...</div></div>
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────
-// ⚠️ Replace with your actual Render URL
-const API_BASE       = 'https://bodhisatvvam.onrender.com';
-// ⚠️ Set this to the same value as ADMIN_PASS in Render environment variables
-const ADMIN_PASSWORD = 'Divy@969P'; // Change this + set ADMIN_PASS in Render
+const API_BASE       = 'https://bodhisatvvam.onrender.com'; 
+const ADMIN_PASSWORD = 'Divy@969P'; 
 
 // ── STATE ─────────────────────────────────────────────────
 let allOrders   = [];
+let allBookings = [];
+let currentTab  = 'orders';
 let sortKey     = 'date';
-let sortDir     = -1; // -1 = descending (newest first)
+let sortDir     = -1; // -1 = newest first
 
 // ── AUTH ──────────────────────────────────────────────────
 function login() {
   const input = document.getElementById('passwordInput').value;
   if (input === ADMIN_PASSWORD) {
-    // Store password in session to send with each request to backend
     sessionStorage.setItem('bdh_admin', 'true');
     sessionStorage.setItem('bdh_pass', input);
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('dashboard').style.display = 'block';
-    setTimeout(() => {
-      document.getElementById('loginScreen').style.display = 'none';
-    }, 400);
-    loadOrders();
+    setTimeout(() => { document.getElementById('loginScreen').style.display = 'none'; }, 400);
+    loadData();
   } else {
     document.getElementById('loginError').style.display = 'block';
     document.getElementById('passwordInput').value = '';
@@ -465,40 +355,50 @@ function logout() {
   location.reload();
 }
 
-// Note: We intentionally don't auto-restore session on page load
-// because bdh_pass is cleared on logout and would cause 401 errors.
-// User must log in again each page load — sessionStorage persists within the tab.
+// ── TAB SWITCHING ─────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
 
+  if (tab === 'orders') {
+    document.getElementById('ordersWrap').style.display = 'block';
+    document.getElementById('bookingsWrap').style.display = 'none';
+  } else {
+    document.getElementById('ordersWrap').style.display = 'none';
+    document.getElementById('bookingsWrap').style.display = 'block';
+  }
+  filterData();
+}
 
-// ── LOAD ORDERS FROM GOOGLE SHEET ─────────────────────────
-async function loadOrders() {
+// ── LOAD ALL DATA ─────────────────────────────────────────
+async function loadData() {
   const btn = document.getElementById('refreshBtn');
   btn.classList.add('spinning');
   document.getElementById('loadingOverlay').classList.add('active');
 
   try {
-    // Fetch orders via backend proxy (avoids CSP issues with direct Google Script calls)
     const pass = sessionStorage.getItem('bdh_pass') || '';
-    const res  = await fetch(`${API_BASE}/api/admin/orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pass }),
-    });
-    const data = await res.json();
+    
+    // Fetch both datasets simultaneously
+    const [ordersRes, bookingsRes] = await Promise.all([
+      fetch(`${API_BASE}/api/admin/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pass }) }),
+      fetch(`${API_BASE}/api/admin/bookings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pass }) })
+    ]);
 
-    if (data.success && data.orders) {
-      allOrders = data.orders;
-      updateStats();
-      renderOrders();
-      showToast('✅ Orders refreshed');
-    } else {
-      showToast('❌ Could not load orders');
-      showEmpty('Could not load orders. Check your Google Script URL.');
-    }
+    const oData = await ordersRes.json();
+    const bData = await bookingsRes.json();
+
+    if (oData.success) allOrders = oData.orders || [];
+    if (bData.success) allBookings = bData.bookings || [];
+
+    updateStats();
+    filterData();
+    showToast('✅ Data refreshed successfully');
+
   } catch (err) {
     console.error('Load error:', err);
     showToast('❌ Connection failed');
-    showEmpty('Connection failed. Make sure the Google Script is deployed.');
   } finally {
     btn.classList.remove('spinning');
     document.getElementById('loadingOverlay').classList.remove('active');
@@ -509,65 +409,103 @@ async function loadOrders() {
 function updateStats() {
   const today = new Date().toLocaleDateString('en-IN');
 
-  const total    = allOrders.length;
-  const todayOrders = allOrders.filter(o => {
-    const d = new Date(o.date).toLocaleDateString('en-IN');
-    return d === today;
+  const total = allOrders.length + allBookings.length;
+  
+  const todayItems = [...allOrders, ...allBookings].filter(item => {
+    return new Date(item.date).toLocaleDateString('en-IN') === today;
   });
-  const pending  = allOrders.filter(o =>
-    o.status === 'New Order' || o.status === 'Paid'
-  ).length;
 
-  // Revenue from paid/dispatched/delivered orders
-  const revenue  = allOrders
+  const pending = 
+    allOrders.filter(o => o.status === 'New Order' || o.status === 'Paid').length + 
+    allBookings.filter(b => b.status === 'Confirmed').length;
+
+  const revOrders = allOrders
     .filter(o => ['Paid','Dispatched','Delivered'].includes(o.status))
-    .reduce((sum, o) => {
-      const num = parseFloat(String(o.total).replace(/[^0-9.]/g, ''));
-      return sum + (isNaN(num) ? 0 : num);
-    }, 0);
+    .reduce((sum, o) => sum + (parseFloat(String(o.total).replace(/[^0-9.]/g, '')) || 0), 0);
+
+  const revBookings = allBookings
+    .filter(b => b.status === 'Confirmed' || b.status === 'Completed')
+    .reduce((sum, b) => sum + (parseFloat(String(b.total).replace(/[^0-9.]/g, '')) || 0), 0);
 
   document.getElementById('statTotal').textContent   = total;
-  document.getElementById('statRevenue').textContent = '₹' + revenue.toLocaleString('en-IN');
-  document.getElementById('statToday').textContent   = todayOrders.length;
+  document.getElementById('statRevenue').textContent = '₹' + (revOrders + revBookings).toLocaleString('en-IN');
+  document.getElementById('statToday').textContent   = todayItems.length;
   document.getElementById('statTodayDate').textContent = today;
   document.getElementById('statPending').textContent = pending;
 }
 
-// ── RENDER TABLE ──────────────────────────────────────────
-function renderOrders(orders) {
-  const list = orders || getFilteredSorted();
+// ── RENDER & FILTER ───────────────────────────────────────
+function filterData() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+
+  if (currentTab === 'orders') {
+    let list = allOrders.filter(o => {
+      const matchSearch = !search || (o.name||'').toLowerCase().includes(search) || (o.phone||'').includes(search) || (o.orderId||'').toLowerCase().includes(search);
+      const matchStatus = !status || o.status === status || (status === 'Paid' && o.status === 'Paid'); 
+      return matchSearch && matchStatus;
+    });
+    list = sortData(list);
+    renderOrdersTable(list);
+  } else {
+    let list = allBookings.filter(b => {
+      const matchSearch = !search || (b.name||'').toLowerCase().includes(search) || (b.phone||'').includes(search) || (b.bookingId||'').toLowerCase().includes(search) || (b.sessionName||'').toLowerCase().includes(search);
+      // Bookings don't use 'Dispatched', but if 'Paid' is selected, show 'Confirmed' bookings
+      const matchStatus = !status || b.status === status || (status === 'Paid' && b.status === 'Confirmed');
+      return matchSearch && matchStatus;
+    });
+    list = sortData(list);
+    renderBookingsTable(list);
+  }
+}
+
+function sortData(list) {
+  return list.sort((a, b) => {
+    let av = a[sortKey] || '', bv = b[sortKey] || '';
+    if (sortKey === 'total') {
+      av = parseFloat(String(av).replace(/[^0-9.]/g, '')) || 0;
+      bv = parseFloat(String(bv).replace(/[^0-9.]/g, '')) || 0;
+    } else if (sortKey === 'date') {
+      av = new Date(av).getTime() || 0;
+      bv = new Date(bv).getTime() || 0;
+    }
+    return av > bv ? sortDir : av < bv ? -sortDir : 0;
+  });
+}
+
+function sortBy(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = -1; }
+  filterData();
+}
+
+// ── RENDER TABLES ─────────────────────────────────────────
+function renderOrdersTable(list) {
   const tbody = document.getElementById('ordersBody');
-  document.getElementById('ordersCount').textContent =
-    `Showing ${list.length} of ${allOrders.length} orders`;
+  document.getElementById('itemCountDisplay').textContent = `Showing ${list.length} of ${allOrders.length} orders`;
 
   if (list.length === 0) {
-    showEmpty('No orders match your search.');
+    tbody.innerHTML = `<tr><td colspan="6"><div class="table-message"><span class="table-message-icon">🌿</span><div class="table-message-text">No orders found.</div></div></td></tr>`;
     return;
   }
 
-  tbody.innerHTML = list.map((o, idx) => `
+  tbody.innerHTML = list.map(o => `
     <tr>
-      <td style="white-space:nowrap;font-size:0.78rem;color:var(--text-light)">
-        ${formatDate(o.date)}
-      </td>
+      <td style="white-space:nowrap;font-size:0.78rem;color:var(--text-light)">${formatDate(o.date)}</td>
       <td><div class="order-id">${o.orderId || '—'}</div></td>
-      <td><div class="customer-name">${o.name || '—'}</div></td>
       <td>
-        <a href="https://wa.me/${o.phone}" target="_blank"
-           class="phone-link" title="Open WhatsApp">
-          📱 ${o.phone || '—'}
-        </a>
+        <div class="customer-name">${o.name || '—'}</div>
+        <a href="https://wa.me/${o.phone}" target="_blank" class="phone-link">📱 ${o.phone || '—'}</a>
       </td>
-      <td><div class="items-cell">${o.items || '—'}</div></td>
+      <td>
+        <div class="items-cell">${o.items || '—'}</div>
+        ${o.notes ? `<div style="font-size:0.75rem; color:var(--amber); margin-top:6px">Note: ${o.notes}</div>` : ''}
+      </td>
       <td><div class="total-cell">${o.total || '—'}</div></td>
       <td>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
-          <span class="status-badge status-${(o.status || 'New Order').replace(' ','-')}">
-            ${o.status || 'New Order'}
-          </span>
-          <select class="status-select"
-            onchange="updateStatus('${o.orderId}', this.value, this)"
-            title="Update status">
+          <span class="status-badge status-${(o.status || 'New Order').replace(' ','-')}">${o.status || 'New Order'}</span>
+          <select class="status-select" onchange="updateStatus('${o.orderId}', this.value, this)">
             <option value="New Order"  ${(o.status||'') === 'New Order'  ? 'selected' : ''}>New Order</option>
             <option value="Paid"       ${(o.status||'') === 'Paid'       ? 'selected' : ''}>Paid</option>
             <option value="Dispatched" ${(o.status||'') === 'Dispatched' ? 'selected' : ''}>Dispatched</option>
@@ -580,63 +518,44 @@ function renderOrders(orders) {
   `).join('');
 }
 
-function showEmpty(msg) {
-  document.getElementById('ordersBody').innerHTML = `
-    <tr><td colspan="7">
-      <div class="table-message">
-        <span class="table-message-icon">🌿</span>
-        <div class="table-message-text">${msg}</div>
-      </div>
-    </td></tr>`;
+function renderBookingsTable(list) {
+  const tbody = document.getElementById('bookingsBody');
+  document.getElementById('itemCountDisplay').textContent = `Showing ${list.length} of ${allBookings.length} sessions`;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="table-message"><span class="table-message-icon">✨</span><div class="table-message-text">No sessions found.</div></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(b => `
+    <tr>
+      <td style="white-space:nowrap;font-size:0.78rem;color:var(--text-light)">${formatDate(b.date)}</td>
+      <td><div class="order-id" style="color:var(--amber)">${b.bookingId || '—'}</div></td>
+      <td>
+        <div class="customer-name">${b.name || '—'}</div>
+        <a href="https://wa.me/${b.phone}" target="_blank" class="phone-link">📱 ${b.phone || '—'}</a>
+      </td>
+      <td>
+        <div style="font-weight:500; color:var(--forest)">${b.sessionName || '—'}</div>
+        ${b.notes ? `<div style="font-size:0.75rem; color:var(--text-light); margin-top:4px;">${b.notes}</div>` : ''}
+      </td>
+      <td>
+        <div style="font-family:'Cormorant Garamond', serif; font-size:1rem; color:var(--forest); font-weight:600">${b.sessionDate || '—'}</div>
+        <div style="font-size:0.75rem; color:var(--text-mid)">${b.timeSlot || '—'} IST</div>
+      </td>
+      <td><div class="total-cell">${b.total || '—'}</div></td>
+      <td>
+        <span class="status-badge status-${(b.status || 'Confirmed').replace(' ','-')}">${b.status || 'Confirmed'}</span>
+      </td>
+    </tr>
+  `).join('');
 }
 
-// ── FILTER & SORT ─────────────────────────────────────────
-function getFilteredSorted() {
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  const status = document.getElementById('statusFilter').value;
-
-  let list = allOrders.filter(o => {
-    const matchSearch = !search ||
-      (o.name    || '').toLowerCase().includes(search) ||
-      (o.phone   || '').includes(search) ||
-      (o.orderId || '').toLowerCase().includes(search) ||
-      (o.items   || '').toLowerCase().includes(search);
-    const matchStatus = !status || o.status === status;
-    return matchSearch && matchStatus;
-  });
-
-  list.sort((a, b) => {
-    let av = a[sortKey] || '', bv = b[sortKey] || '';
-    if (sortKey === 'total') {
-      av = parseFloat(String(av).replace(/[^0-9.]/g, '')) || 0;
-      bv = parseFloat(String(bv).replace(/[^0-9.]/g, '')) || 0;
-    } else if (sortKey === 'date') {
-      av = new Date(av).getTime() || 0;
-      bv = new Date(bv).getTime() || 0;
-    }
-    return av > bv ? sortDir : av < bv ? -sortDir : 0;
-  });
-
-  return list;
-}
-
-function filterOrders() { renderOrders(); }
-
-function sortBy(key) {
-  if (sortKey === key) sortDir *= -1;
-  else { sortKey = key; sortDir = -1; }
-  renderOrders();
-}
-
-// ── HELPERS ───────────────────────────────────────────────
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
   if (isNaN(d)) return dateStr;
-  return d.toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  });
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 // ── UPDATE ORDER STATUS ───────────────────────────────────
@@ -648,28 +567,25 @@ async function updateStatus(orderId, newStatus, selectEl) {
 
   try {
     const res  = await fetch(`${API_BASE}/api/admin/update-status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pass, orderId, status: newStatus }),
     });
     const data = await res.json();
 
     if (res.ok && data.success) {
-      // Update the badge visually without re-fetching all orders
-      const row    = selectEl.closest('tr');
-      const badge  = row.querySelector('.status-badge');
+      const row   = selectEl.closest('tr');
+      const badge = row.querySelector('.status-badge');
       if (badge) {
-        badge.textContent  = newStatus;
-        badge.className    = `status-badge status-${newStatus.replace(' ', '-')}`;
+        badge.textContent = newStatus;
+        badge.className   = `status-badge status-${newStatus.replace(' ', '-')}`;
       }
-      // Update local data
       const order = allOrders.find(o => o.orderId === orderId);
       if (order) order.status = newStatus;
       updateStats();
       showToast(`✅ ${orderId} → ${newStatus}`);
     } else {
       showToast('❌ ' + (data.message || 'Update failed'));
-      selectEl.value = originalValue; // Revert
+      selectEl.value = originalValue;
     }
   } catch (err) {
     showToast('❌ Connection failed');
@@ -680,7 +596,7 @@ async function updateStatus(orderId, newStatus, selectEl) {
 }
 
 function showToast(msg) {
-  const wrap  = document.getElementById('toastWrap');
+  const wrap = document.getElementById('toastWrap');
   const toast = document.createElement('div');
   toast.className = 'toast-msg';
   toast.textContent = msg;
