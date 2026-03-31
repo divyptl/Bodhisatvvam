@@ -1243,17 +1243,18 @@ const products = [
   { id: 146, name: "Shifting Into a New House Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
   { id: 147, name: "Remedy for Defamation", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
 
-  // --- HEALING SESSIONS (10 Items) ---
-  { id: 201, name: "Chakra Healing & Balancing", emoji: "✨", category: "healing", desc: "One-on-one personal healing session.", price: 2499, rating: 5 },
-  { id: 202, name: "Aura Cleaning & Energize", emoji: "💫", category: "healing", desc: "One-on-one personal healing session.", price: 2499, rating: 5 },
-  { id: 203, name: "Healing Your Relationships", emoji: "💖", category: "healing", desc: "One-on-one personal healing session.", price: 2499, rating: 5 },
-  { id: 204, name: "Build Your Financial Well-being", emoji: "📈", category: "healing", desc: "One-on-one personal healing session.", price: 2499, rating: 5 },
-  { id: 205, name: "Mental, Emotional & Physical Healing", emoji: "🧘‍♀️", category: "healing", desc: "One-on-one personal healing session.", price: 2499, rating: 5 },
-  { id: 206, name: "Overcome Fear, Anxiety, Stress, Addiction & Negativity", emoji: "🕊️", category: "healing", desc: "One-on-one personal healing session.", price: 2499, rating: 5 },
-  { id: 207, name: "(NLP) Neuro Linguistic Programming Therapy", emoji: "🧠", category: "healing", desc: "One-on-one personal therapy session.", price: 2499, rating: 5 },
-  { id: 208, name: "Revitalizing Your Mental Strength & Energy Levels", emoji: "⚡", category: "healing", desc: "One-on-one personal healing session.", price: 2499, rating: 5 },
-  { id: 209, name: "Garbh Sanskar Therapy", emoji: "🤰", category: "healing", desc: "One-on-one personal therapy session.", price: 2499, rating: 5 },
-  { id: 210, name: "Pet (Animal) Healing", emoji: "🐾", category: "healing", desc: "One-on-one healing session for your pet.", price: 2499, rating: 5 },
+// --- HEALING SESSIONS (11 Items) ---
+  { id: 201, name: "Chakra Healing & Balancing", emoji: "✨", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
+  { id: 202, name: "Aura Cleaning & Energize", emoji: "💫", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
+  { id: 203, name: "Healing Your Relationships", emoji: "💖", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
+  { id: 204, name: "Build Your Financial Well-being", emoji: "📈", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
+  { id: 205, name: "Mental, Emotional & Physical Healing", emoji: "🧘‍♀️", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
+  { id: 206, name: "Overcome Fear, Anxiety, Stress, Addiction & Negativity", emoji: "🕊️", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
+  { id: 207, name: "(NLP) Neuro Linguistic Programming Therapy", emoji: "🧠", category: "healing", desc: "One-on-one personal therapy session.", price: 500, rating: 5 },
+  { id: 208, name: "Revitalizing Your Mental Strength & Energy Levels", emoji: "⚡", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
+  { id: 209, name: "Garbh Sanskar Therapy", emoji: "🤰", category: "healing", desc: "One-on-one personal therapy session.", price: 500, rating: 5 },
+  { id: 210, name: "Pet (Animal) Healing", emoji: "🐾", category: "healing", desc: "One-on-one healing session for your pet.", price: 500, rating: 5 },
+  { id: 211, name: "Group Meditation", emoji: "🧘‍♂️", category: "healing", desc: "Join Batch 1 (5:00 AM) or Batch 2 (9:30 AM).", price: 100, rating: 5 },
 
   // --- CANDLES (40 Items) ---
   { id: 301, name: "Releasing Fear", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
@@ -1300,7 +1301,14 @@ const products = [
 
 let cart = [];
 let currentFilter = 'all';
+const PRODUCTS_PER_PAGE = 12;
+let visibleCount = PRODUCTS_PER_PAGE;
 let currentSort = 'featured';
+
+function loadMore() {
+  visibleCount += PRODUCTS_PER_PAGE;
+  renderProducts(currentFilter);
+}
 
 function sortArray(arr) {
   let sorted = [...arr];
@@ -1311,46 +1319,32 @@ function sortArray(arr) {
 
 function changeSort(val) {
   currentSort = val;
+  visibleCount = PRODUCTS_PER_PAGE; // Reset to 12 when sorting changes
   renderProducts(currentFilter);
-  searchProducts(); // Keeps search active after sorting
+  searchProducts(); 
 }
 
-function openQuickView(id, event) {
-  if(event) event.stopPropagation();
-  const p = products.find(prod => prod.id === id);
-  if(!p) return;
-
-  const content = document.getElementById('quickViewContent');
-  const catName = p.category.charAt(0).toUpperCase() + p.category.slice(1);
-  const btnText = p.category === 'healing' ? '🌿 Book Session' : '🛒 Add to Cart';
-
-  content.innerHTML = `
-    <span class="qv-emoji">${p.emoji}</span>
-    <div class="product-category" style="margin-bottom:8px;">${catName}</div>
-    <div class="qv-title">${p.name}</div>
-    <div class="star-rating" style="justify-content:center; margin-bottom:12px;">${'⭐'.repeat(p.rating)}</div>
-    <div class="qv-price">₹${p.price.toFixed(2)}</div>
-    <div class="qv-desc">${p.desc}</div>
-    <button class="btn-primary" onclick="addToCart(${p.id}, event); closeQuickView();" style="width:100%; cursor:none;">${btnText}</button>
-  `;
-  document.getElementById('quickViewOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+function filterProducts(filter, btn) {
+  currentFilter = filter;
+  visibleCount = PRODUCTS_PER_PAGE; // Reset to 12 when tab changes
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderProducts(filter);
 }
 
-function closeQuickView() {
-  document.getElementById('quickViewOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
 // ── RENDER PRODUCTS ──
 function renderProducts(filter) {
   const grid = document.getElementById('productsGrid');
   const count = document.getElementById('productsCount');
   let filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
-  filtered = sortArray(filtered); // Apply sorting
+  filtered = sortArray(filtered); 
 
-  count.textContent = `Showing ${filtered.length} offering${filtered.length !== 1 ? 's' : ''}`;
+  // RESTORED SLICE LOGIC HERE 👇
+  const visible = filtered.slice(0, visibleCount);
 
-  grid.innerHTML = filtered.map(p => `
+  count.textContent = `Showing ${visible.length} of ${filtered.length} offering${filtered.length !== 1 ? 's' : ''}`;
+
+  grid.innerHTML = visible.map(p => `
     <div class="product-card fade-in-up" data-id="${p.id}">
       <div class="product-img-wrap">
         <span class="product-emoji">${p.emoji}</span>
@@ -1371,6 +1365,10 @@ function renderProducts(filter) {
       </div>
     </div>
   `).join('');
+
+  // RESTORED LOAD MORE BUTTON DISPLAY LOGIC 👇
+  const wrap = document.getElementById('loadMoreWrap');
+  if (wrap) wrap.style.display = visibleCount >= filtered.length ? 'none' : 'block';
 
   observeAnimations();
 }
