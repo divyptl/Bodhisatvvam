@@ -155,8 +155,13 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
             `${formatItemsForWhatsApp(items)}\n` +
             `--------------------------\n` +
             `*Total Paid:* ${total}\n` +
-            `*Delivery to:* ${address}\n\n` +
-            `We will dispatch your order shortly and keep you updated here.\n\n` +
+            `*Delivery to:* ${address}\n\n`; 
+
+            if (customerNotes && customerNotes.trim() !== '') {
+                    body += `*Notes:* ${customerNotes.split(' | ').join('\n')}\n\n`;
+            }
+
+        body += `We will dispatch your order shortly and keep you updated here.\n\n` +
             `_Empower Your Life_ 🌸\n` +
             `-- Shree Bodhisatvvam Team`;
 
@@ -186,7 +191,7 @@ async function sendWhatsApp(name, phone, orderId, items, total, address) {
 // Called when customer clicks "Pay Now" -- before payment happens.
 // Creates a Razorpay order and returns the order_id to the frontend.
 app.post('/api/create-order', orderLimiter, async (req, res) => {
-    const { name, phone, address, items, total } = req.body;
+    const { name, phone, address, items, total, customerNotes} = req.body;
 
     const errors = validateOrderInput({ name, phone, address, items, total });
     if (errors.length > 0) {
@@ -252,6 +257,7 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
         address,
         items,
         total,
+        customerNotes
     } = req.body;
 
     // 7a. Verify Razorpay HMAC signature
@@ -280,10 +286,11 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
         total,
         status:  'Paid', // Override default "New Order" since payment is confirmed
         paymentId: razorpay_payment_id,
+        notes: customerNotes || ''
     });
 
     // 7c. Send WhatsApp confirmation
-    await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address);
+    await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address, customerNotes);
 
     // 7d. Return success to frontend
     return res.status(200).json({
