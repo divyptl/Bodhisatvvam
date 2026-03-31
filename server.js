@@ -459,7 +459,30 @@ app.post('/api/admin/orders', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Could not fetch orders.' });
     }
 });
+// ── ADMIN: Fetch bookings (proxies Google Sheet) ────────────
+app.post('/api/admin/bookings', async (req, res) => {
+    const { password } = req.body;
 
+    const ADMIN_PASS = process.env.ADMIN_PASS;
+    if (!ADMIN_PASS || password !== ADMIN_PASS) {
+        return res.status(401).json({ success: false, message: 'Incorrect password.' });
+    }
+
+    if (!GOOGLE_SCRIPT_URL) {
+        return res.status(503).json({ success: false, message: 'Google Script not configured.' });
+    }
+
+    try {
+        const response = await axios.get(
+            `${GOOGLE_SCRIPT_URL}?action=getBookings`,
+            { timeout: 25000 }
+        );
+        return res.status(200).json(response.data);
+    } catch (err) {
+        console.error('Admin bookings fetch error:', err.message);
+        return res.status(500).json({ success: false, message: 'Could not fetch bookings.' });
+    }
+});
 
 // ── ADMIN: Update order status ────────────────────────────
 app.post('/api/admin/update-status', async (req, res) => {
