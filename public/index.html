@@ -1402,7 +1402,32 @@ function filterProducts(filter, btn) {
   btn.classList.add('active');
   renderProducts(filter);
 }
+function openQuickView(id, event) {
+  if(event) event.stopPropagation();
+  const p = products.find(prod => prod.id === id);
+  if(!p) return;
 
+  const content = document.getElementById('quickViewContent');
+  const catName = p.category.charAt(0).toUpperCase() + p.category.slice(1);
+  const btnText = p.category === 'healing' ? '🌿 Book Session' : '🛒 Add to Cart';
+
+  content.innerHTML = `
+    <span class="qv-emoji">${p.emoji}</span>
+    <div class="product-category" style="margin-bottom:8px;">${catName}</div>
+    <div class="qv-title">${p.name}</div>
+    <div class="star-rating" style="justify-content:center; margin-bottom:12px;">${'⭐'.repeat(p.rating)}</div>
+    <div class="qv-price">₹${p.price.toFixed(2)}</div>
+    <div class="qv-desc">${p.desc}</div>
+    <button class="btn-primary" onclick="addToCart(${p.id}, event); closeQuickView();" style="width:100%; cursor:none;">${btnText}</button>
+  `;
+  document.getElementById('quickViewOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeQuickView() {
+  document.getElementById('quickViewOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
 // ── CART ──
   // ── SEARCH BAR ──
 function searchProducts() {
