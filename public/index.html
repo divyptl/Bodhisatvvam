@@ -1013,11 +1013,18 @@
     <div class="products-header-left">
       <div class="section-tag">Our Offerings</div>
       <h2 class="section-title">Shop our <em>collection</em></h2>
-      <div class="filter-tabs">
-        <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
-        <button class="filter-tab" onclick="filterProducts('salts', this)">Energy Salts</button>
-        <button class="filter-tab" onclick="filterProducts('candles', this)">Infused Candles</button>
-        <button class="filter-tab" onclick="filterProducts('healing', this)">Personal Healing</button>
+      <div class="products-controls">
+        <div class="filter-tabs" style="margin-top:0;">
+          <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
+          <button class="filter-tab" onclick="filterProducts('salts', this)">Energy Salts</button>
+          <button class="filter-tab" onclick="filterProducts('candles', this)">Infused Candles</button>
+          <button class="filter-tab" onclick="filterProducts('healing', this)">Personal Healing</button>
+        </div>
+        <select id="sortSelect" class="sort-select" onchange="changeSort(this.value)">
+          <option value="featured">Sort By: Featured</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+        </select>
       </div>
     </div>
     <div class="products-count" id="productsCount">Loading...</div>
@@ -1152,9 +1159,19 @@
         <label class="form-label">PIN Code *</label>
         <input type="text" class="form-input" id="zipCode" placeholder="000000">
       </div>
-
+     <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label">Order Notes (Optional)</label>
+        <textarea class="form-input" id="generalNotes" rows="2" placeholder="Any special instructions or custom candle intentions..."></textarea>
+      </div>
       <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()">💳 Pay Now</button>
     </div>
+  </div>
+</div>
+     
+<div class="modal-overlay" id="quickViewOverlay" onclick="if(event.target===this) closeQuickView()">
+  <div class="checkout-modal" style="max-width: 500px; text-align: center; padding-bottom: 20px;">
+    <button class="modal-close" onclick="closeQuickView()" style="position:absolute; top:24px; right:28px; z-index:2;">✕</button>
+    <div class="modal-body" id="quickViewContent" style="padding: 48px 40px 24px;"></div>
   </div>
 </div>
 
@@ -1172,7 +1189,8 @@
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+     <script>
 // ── MASSIVE PRODUCT DATA ARRAY ──
 // Note: Placeholder prices are used for Salts (₹599) and Healing Sessions (₹2499). You can easily change the numbers below!
 const products = [
@@ -1282,12 +1300,54 @@ const products = [
 
 let cart = [];
 let currentFilter = 'all';
+let currentSort = 'featured';
 
+function sortArray(arr) {
+  let sorted = [...arr];
+  if (currentSort === 'price-low') sorted.sort((a, b) => a.price - b.price);
+  if (currentSort === 'price-high') sorted.sort((a, b) => b.price - a.price);
+  return sorted;
+}
+
+function changeSort(val) {
+  currentSort = val;
+  renderProducts(currentFilter);
+  searchProducts(); // Keeps search active after sorting
+}
+
+function openQuickView(id, event) {
+  if(event) event.stopPropagation();
+  const p = products.find(prod => prod.id === id);
+  if(!p) return;
+
+  const content = document.getElementById('quickViewContent');
+  const catName = p.category.charAt(0).toUpperCase() + p.category.slice(1);
+  const btnText = p.category === 'healing' ? '🌿 Book Session' : '🛒 Add to Cart';
+
+  content.innerHTML = `
+    <span class="qv-emoji">${p.emoji}</span>
+    <div class="product-category" style="margin-bottom:8px;">${catName}</div>
+    <div class="qv-title">${p.name}</div>
+    <div class="star-rating" style="justify-content:center; margin-bottom:12px;">${'⭐'.repeat(p.rating)}</div>
+    <div class="qv-price">₹${p.price.toFixed(2)}</div>
+    <div class="qv-desc">${p.desc}</div>
+    <button class="btn-primary" onclick="addToCart(${p.id}, event); closeQuickView();" style="width:100%; cursor:none;">${btnText}</button>
+  `;
+  document.getElementById('quickViewOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeQuickView() {
+  document.getElementById('quickViewOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
 // ── RENDER PRODUCTS ──
 function renderProducts(filter) {
   const grid = document.getElementById('productsGrid');
   const count = document.getElementById('productsCount');
-  const filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+  let filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+  filtered = sortArray(filtered); // Apply sorting
+
   count.textContent = `Showing ${filtered.length} offering${filtered.length !== 1 ? 's' : ''}`;
 
   grid.innerHTML = filtered.map(p => `
@@ -1295,6 +1355,7 @@ function renderProducts(filter) {
       <div class="product-img-wrap">
         <span class="product-emoji">${p.emoji}</span>
         <div class="product-img-overlay"></div>
+        <button class="quick-view-trigger" onclick="openQuickView(${p.id}, event)">Quick View</button>
         <div class="card-actions">
           <button class="quick-add" onclick="addToCart(${p.id}, event)">+ Select</button>
         </div>
@@ -1313,7 +1374,6 @@ function renderProducts(filter) {
 
   observeAnimations();
 }
-
 function filterProducts(filter, btn) {
   currentFilter = filter;
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
@@ -1491,6 +1551,14 @@ function setBtn(text, disabled) {
 }
 
 function collectOrderData() {
+  let finalNotesArray = [];
+  const generalNotesEl = document.getElementById('generalNotes');
+  if (generalNotesEl && generalNotesEl.value.trim()) {
+      finalNotesArray.push(`General: ${generalNotesEl.value.trim()}`);
+  }
+  cart.forEach(item => {
+      if (item.notes) finalNotesArray.push(`${item.name}: ${item.notes}`);
+  });
   return {
     name:    document.getElementById('firstName').value.trim() + ' ' + document.getElementById('lastName').value.trim(),
     phone:   document.getElementById('phoneNum').value.trim(),
@@ -1498,11 +1566,11 @@ function collectOrderData() {
              document.getElementById('city').value.trim() + ', ' +
              document.getElementById('state').value.trim() + ' ' +
              document.getElementById('zipCode').value.trim(),
-    items:   cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+    customerNotes: finalNotesArray.join(' | '), // NEW FIELD
+    items:   cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes || '' })),
     total:   '₹' + cart.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2),
   };
 }
-
 function validateForm() {
   const required = ['firstName', 'lastName', 'phoneNum', 'streetAddr', 'city', 'state', 'zipCode'];
   let valid = true;
@@ -1733,6 +1801,20 @@ document.addEventListener('DOMContentLoaded', () => {
   .hero-floating-badge { bottom: 16px; right: 16px; padding: 12px 16px; }
   .hero-center-art { padding: 30px; }
 }
+/* ── SORTING & QUICK VIEW ── */
+  .products-controls { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px; margin-top: 32px; }
+  .sort-select { padding: 8px 16px; border: 1px solid var(--cream-dark); background: transparent; font-family: 'Jost', sans-serif; font-size: 0.76rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-mid); outline: none; cursor: none; transition: all 0.25s; }
+  .sort-select:focus, .sort-select:hover { border-color: var(--forest); }
+  
+  .quick-view-trigger { position: absolute; top: 40%; left: 50%; transform: translate(-50%, 20px); background: var(--cream); color: var(--forest); border: none; padding: 10px 24px; font-family: 'Jost', sans-serif; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; transition: all 0.3s ease; opacity: 0; box-shadow: 0 8px 20px rgba(28,58,40,0.15); z-index: 20; white-space: nowrap; cursor: none; }
+  .product-card:hover .quick-view-trigger { transform: translate(-50%, -50%); opacity: 1; }
+  .quick-view-trigger:hover { background: var(--gold); color: var(--cream); }
+  
+  .qv-emoji { font-size: 4.5rem; margin-bottom: 16px; display: block; }
+  .qv-title { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; color: var(--forest); line-height: 1.1; margin-bottom: 8px; }
+  .qv-price { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--gold); font-weight: 500; margin-bottom: 24px; }
+  .qv-desc { font-size: 0.95rem; color: var(--text-mid); line-height: 1.8; margin-bottom: 32px; }
+     
 /* Cart bump animation */
 @keyframes cartBump {
   0%   { transform: scale(1); }
