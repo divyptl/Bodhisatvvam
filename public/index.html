@@ -545,6 +545,23 @@
   .star-rating { display: flex; gap: 2px; }
   .star { color: var(--gold); font-size: 0.75rem; }
 
+  .load-more-wrap { text-align: center; margin: 60px 0 20px; }
+  .load-more-btn {
+    background: var(--cream); color: var(--forest);
+    border: 1px solid rgba(28,58,40,0.2);
+    padding: 16px 56px; font-family: 'Jost', sans-serif;
+    font-size: 0.85rem; letter-spacing: 0.15em; text-transform: uppercase;
+    font-weight: 500; cursor: none; transition: all 0.4s ease;
+    display: inline-flex; align-items: center; gap: 12px;
+  }
+  .load-more-btn::after {
+    content: '↓'; font-size: 1.1rem; transition: transform 0.3s;
+  }
+  .load-more-btn:hover {
+    background: var(--forest); color: var(--cream); border-color: var(--forest);
+    transform: translateY(-2px); box-shadow: 0 12px 30px rgba(28,58,40,0.15);
+  }
+  .load-more-btn:hover::after { transform: translateY(4px); }
   /* ── FEATURED BANNER ── */
   .featured-banner {
     background: var(--forest); padding: 80px 60px;
