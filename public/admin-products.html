@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bodhisatvvam — Product Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1c3a28;--forest-light:#2d5a3d;--sage:#7a9e7e;--cream:#f5efe3;--cream-dark:#ede4d2;--amber:#c47c3a;--gold:#d4aa60;--text-dark:#1a2820;--text-mid:#3d5047;--text-light:#7a9080;--danger:#b85c38;--success:#2d6a4f}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh}
+
+.top-nav{background:var(--forest);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.top-nav-logo{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--cream);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.top-nav-logo span{color:var(--gold);font-style:italic}
+.nav-links{display:flex;gap:12px;align-items:center}
+.nav-links a{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);text-decoration:none;padding:8px 16px;border:1px solid rgba(212,170,96,.3);transition:all .2s}
+.nav-links a:hover{background:rgba(212,170,96,.1);color:var(--gold)}
+
+.page-header{padding:32px 40px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--forest)}
+.header-actions{display:flex;gap:12px;align-items:center}
+
+.btn{padding:10px 20px;border:none;font-family:'Jost',sans-serif;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--forest);color:var(--cream)}
+.btn-primary:hover{background:var(--forest-light)}
+.btn-amber{background:var(--amber);color:white}
+.btn-amber:hover{background:#d4894a}
+.btn-outline{background:transparent;border:1px solid var(--cream-dark);color:var(--text-mid)}
+.btn-outline:hover{border-color:var(--forest);color:var(--forest)}
+.btn-danger{background:var(--danger);color:white}
+.btn-danger:hover{background:#c96842}
+.btn-sm{padding:6px 14px;font-size:.7rem}
+
+.controls{padding:20px 40px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.controls input,.controls select{padding:10px 16px;border:1px solid var(--cream-dark);background:white;font-family:'Jost',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s}
+.controls input:focus,.controls select:focus{border-color:var(--forest)}
+.controls input{width:300px}
+.product-count{font-size:.8rem;color:var(--text-light);margin-left:auto}
+
+.grid{padding:20px 40px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.p-card{background:white;border:1px solid var(--cream-dark);transition:border-color .2s,box-shadow .2s;position:relative}
+.p-card:hover{border-color:var(--sage);box-shadow:0 4px 20px rgba(28,58,40,.08)}
+.p-card-img{height:120px;background:linear-gradient(135deg,var(--cream),var(--cream-dark));display:flex;align-items:center;justify-content:center;font-size:3rem;position:relative;overflow:hidden}
+.p-card-img img{width:100%;height:100%;object-fit:cover}
+.p-card-badge{position:absolute;top:8px;right:8px;background:var(--forest);color:var(--cream);font-size:.6rem;padding:3px 8px;letter-spacing:.1em;text-transform:uppercase}
+.p-card-body{padding:16px}
+.p-card-cat{font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--sage);margin-bottom:4px}
+.p-card-name{font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--forest);margin-bottom:4px}
+.p-card-desc{font-size:.78rem;color:var(--text-light);margin-bottom:8px;line-height:1.5}
+.p-card-price{font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--forest);font-weight:500}
+.p-card-id{font-size:.65rem;color:var(--text-light);position:absolute;top:8px;left:8px;background:rgba(255,255,255,.9);padding:2px 6px}
+.p-card-actions{display:flex;gap:6px;margin-top:12px;border-top:1px solid var(--cream-dark);padding-top:12px}
+.p-card-actions .btn{flex:1;text-align:center}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(28,58,40,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--cream);width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-head{padding:24px 28px 18px;border-bottom:1px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center}
+.modal-head h2{font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--forest)}
+.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-light)}
+.modal-body{padding:24px 28px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-mid);margin-bottom:6px;font-weight:500}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid var(--cream-dark);background:white;font-family:'Jost',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--forest)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group textarea{resize:vertical;min-height:60px}
+.modal-foot{padding:16px 28px 24px;display:flex;gap:12px;justify-content:flex-end}
+
+/* Image manager */
+.img-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.img-thumb{width:70px;height:70px;position:relative;border:1px solid var(--cream-dark);overflow:hidden}
+.img-thumb img{width:100%;height:100%;object-fit:cover}
+.img-thumb .del-img{position:absolute;top:2px;right:2px;background:var(--danger);color:white;border:none;width:18px;height:18px;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:32px;right:32px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-msg{background:var(--forest);color:var(--cream);padding:12px 20px;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.2);transform:translateX(120%);transition:transform .3s ease}
+.toast-msg.show{transform:translateX(0)}
+
+.loading{text-align:center;padding:80px;color:var(--text-light);font-size:.9rem}
+.empty-state{text-align:center;padding:80px 40px;color:var(--text-light)}
+.empty-state span{font-size:3rem;display:block;margin-bottom:12px}
+
+@media(max-width:680px){.controls input{width:100%}.grid{grid-template-columns:1fr}.page-header,.controls,.grid{padding-left:16px;padding-right:16px}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="/admin.html" class="top-nav-logo">Bodhi<span>satvvam</span></a>
+  <div class="nav-links">
+    <a href="/admin.html">← Orders & Bookings</a>
+    <a href="/" target="_blank">View Store</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1 class="page-title">📦 Product Manager</h1>
+  <div class="header-actions">
+    <button class="btn btn-amber" onclick="openAddModal()">+ Add Product</button>
+    <button class="btn btn-outline" onclick="loadProducts()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="controls">
+  <input type="text" id="searchProd" placeholder="🔍 Search products..." oninput="filterRender()">
+  <select id="catFilter" onchange="filterRender()">
+    <option value="">All Categories</option>
+    <option value="salts">Energy Salts</option>
+    <option value="candles">Candles</option>
+    <option value="healing">Healing Sessions</option>
+  </select>
+  <span class="product-count" id="prodCount"></span>
+</div>
+
+<div class="grid" id="productsGrid"><div class="loading">Loading products...</div></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="productModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Add Product</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-row">
+        <div class="form-group"><label>Product Name *</label><input id="fName" placeholder="e.g. Protection Salt"></div>
+        <div class="form-group"><label>Category *</label>
+          <select id="fCategory"><option value="salts">Energy Salts</option><option value="candles">Candles</option><option value="healing">Healing Sessions</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Price (₹) *</label><input type="number" id="fPrice" placeholder="599"></div>
+        <div class="form-group"><label>Rating (1-5)</label><input type="number" id="fRating" value="5" min="1" max="5"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Emoji</label><input id="fEmoji" placeholder="🧂"></div>
+        <div class="form-group"><label>Badge</label>
+          <select id="fBadge"><option value="">None</option><option value="bestseller">Bestseller</option><option value="new">New</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="fDesc" placeholder="Short description..."></textarea></div>
+      <div class="form-group" id="imageSection" style="display:none">
+        <label>Product Images</label>
+        <div class="img-grid" id="imageGrid"></div>
+        <input type="file" id="imageInput" accept="image/*" multiple style="margin-top:8px;font-size:.82rem">
+        <button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="uploadImages()">Upload Images</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-bg" id="deleteModal">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <div class="modal-body" style="padding:40px 28px">
+      <span style="font-size:3rem;display:block;margin-bottom:16px">🗑️</span>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--forest);margin-bottom:8px">Delete Product?</h2>
+      <p id="deleteMsg" style="color:var(--text-mid);margin-bottom:24px"></p>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <button class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const API_BASE = '';
+let allProducts = [];
+let deleteTargetId = null;
+
+function getPass() { return sessionStorage.getItem('bdh_pass') || prompt('Enter admin password:') || ''; }
+
+async function loadProducts() {
+  const grid = document.getElementById('productsGrid');
+  grid.innerHTML = '<div class="loading">Loading products...</div>';
+  try {
+    const res = await fetch(`${API_BASE}/api/products`);
+    const data = await res.json();
+    allProducts = data.success ? data.products : [];
+    filterRender();
+    toast('✅ ' + allProducts.length + ' products loaded');
+  } catch(e) { grid.innerHTML = '<div class="empty-state"><span>❌</span>Could not load products.</div>'; }
+}
+
+function filterRender() {
+  const q = document.getElementById('searchProd').value.toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  let list = allProducts.filter(p => {
+    if (cat && p.category !== cat) return false;
+    if (q && !p.name.toLowerCase().includes(q) && !String(p.id).includes(q)) return false;
+    return true;
+  });
+  document.getElementById('prodCount').textContent = `${list.length} of ${allProducts.length} products`;
+  const grid = document.getElementById('productsGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty-state"><span>🌿</span>No products found.</div>'; return; }
+  grid.innerHTML = list.map(p => {
+    const imgSrc = p.images && p.images.length ? `<img src="${p.images[0]}" alt="${p.name}">` : p.emoji || '📦';
+    const hasImg = p.images && p.images.length;
+    return `<div class="p-card">
+      <span class="p-card-id">#${p.id}</span>
+      <div class="p-card-img">${hasImg ? imgSrc : `<span>${p.emoji||'📦'}</span>`}</div>
+      ${p.badge ? `<span class="p-card-badge">${p.badge}</span>` : ''}
+      <div class="p-card-body">
+        <div class="p-card-cat">${p.category}</div>
+        <div class="p-card-name">${p.name}</div>
+        <div class="p-card-desc">${p.desc||''}</div>
+        <div class="p-card-price">₹${p.price}</div>
+        <div class="p-card-actions">
+          <button class="btn btn-outline btn-sm" onclick="openEditModal(${p.id})">✏️ Edit</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="openDeleteModal(${p.id})">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = 'Add New Product';
+  document.getElementById('editId').value = '';
+  document.getElementById('fName').value = '';
+  document.getElementById('fCategory').value = 'salts';
+  document.getElementById('fPrice').value = '';
+  document.getElementById('fRating').value = '5';
+  document.getElementById('fEmoji').value = '';
+  document.getElementById('fBadge').value = '';
+  document.getElementById('fDesc').value = '';
+  document.getElementById('imageSection').style.display = 'none';
+  document.getElementById('saveBtn').textContent = 'Add Product';
+  document.getElementById('productModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('modalTitle').textContent = 'Edit Product #' + id;
+  document.getElementById('editId').value = id;
+  document.getElementById('fName').value = p.name;
+  document.getElementById('fCategory').value = p.category;
+  document.getElementById('fPrice').value = p.price;
+  document.getElementById('fRating').value = p.rating || 5;
+  document.getElementById('fEmoji').value = p.emoji || '';
+  document.getElementById('fBadge').value = p.badge || '';
+  document.getElementById('fDesc').value = p.desc || '';
+  document.getElementById('imageSection').style.display = 'block';
+  renderImageGrid(p);
+  document.getElementById('saveBtn').textContent = 'Save Changes';
+  document.getElementById('productModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('productModal').classList.remove('open'); }
+
+function renderImageGrid(p) {
+  const grid = document.getElementById('imageGrid');
+  if (!p.images || !p.images.length) { grid.innerHTML = '<span style="font-size:.8rem;color:var(--text-light)">No images yet</span>'; return; }
+  grid.innerHTML = p.images.map(img => `<div class="img-thumb"><img src="${img}"><button class="del-img" onclick="deleteImage(${p.id},'${img}')">✕</button></div>`).join('');
+}
+
+async function saveProduct() {
+  const pass = getPass();
+  const editId = document.getElementById('editId').value;
+  const body = {
+    password: pass,
+    name: document.getElementById('fName').value,
+    category: document.getElementById('fCategory').value,
+    price: parseFloat(document.getElementById('fPrice').value),
+    rating: parseInt(document.getElementById('fRating').value) || 5,
+    emoji: document.getElementById('fEmoji').value,
+    badge: document.getElementById('fBadge').value,
+    desc: document.getElementById('fDesc').value,
+  };
+  if (!body.name || !body.price) { toast('❌ Name and price are required'); return; }
+  const url = editId ? '/api/admin/products/edit' : '/api/admin/products/add';
+  if (editId) body.id = parseInt(editId);
+  try {
+    const res = await fetch(API_BASE + url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const data = await res.json();
+    if (data.success) {
+      toast('✅ Product ' + (editId ? 'updated' : 'added'));
+      closeModal();
+      loadProducts();
+    } else { toast('❌ ' + (data.message || 'Failed')); }
+  } catch(e) { toast('❌ Connection error'); }
+}
+
+function openDeleteModal(id) {
+  deleteTargetId = id;
+  const p = allProducts.find(x => x.id === id);
+  document.getElementById('deleteMsg').textContent = `Are you sure you want to delete "${p ? p.name : id}"?`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); deleteTargetId = null; }
+
+async function confirmDelete() {
+  if (!deleteTargetId) return;
+  const pass = getPass();
+  try {
+    const res = await fetch(API_BASE + '/api/admin/products/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass, id:deleteTargetId}) });
+    const data = await res.json();
+    if (data.success) { toast('✅ Product deleted'); closeDeleteModal(); loadProducts(); }
+    else { toast('❌ ' + (data.message || 'Failed')); }
+  } catch(e) { toast('❌ Connection error'); }
+}
+
+async function uploadImages() {
+  const editId = document.getElementById('editId').value;
+  if (!editId) { toast('❌ Save the product first, then upload images'); return; }
+  const files = document.getElementById('imageInput').files;
+  if (!files.length) { toast('❌ Select images first'); return; }
+  const pass = getPass();
+  const fd = new FormData();
+  for (let f of files) fd.append('images', f);
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/products/${editId}/upload-image`, {
+      method:'POST', headers:{'x-admin-password': pass}, body: fd
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast('✅ Images uploaded');
+      const p = allProducts.find(x => x.id === parseInt(editId));
+      if (p) p.images = data.images;
+      renderImageGrid(p || {images: data.images});
+      document.getElementById('imageInput').value = '';
+    } else { toast('❌ ' + (data.message || 'Upload failed')); }
+  } catch(e) { toast('❌ Upload error'); }
+}
+
+async function deleteImage(productId, imgPath) {
+  const pass = getPass();
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/products/${productId}/delete-image`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass, imagePath:imgPath})
+    });
+    const data = await res.json();
+    if (data.success) {
+      const p = allProducts.find(x => x.id === productId);
+      if (p) p.images = data.images;
+      renderImageGrid(p || {images: data.images});
+      toast('✅ Image removed');
+    }
+  } catch(e) { toast('❌ Error'); }
+}
+
+function toast(msg) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast-msg';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 3000);
+}
+
+// Init
+loadProducts();
+</script>
+</body>
+</html>

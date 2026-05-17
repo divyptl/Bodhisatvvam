@@ -1215,113 +1215,23 @@
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
      <script>
-// ── MASSIVE PRODUCT DATA ARRAY ──
-// Note: Placeholder prices are used for Salts (₹599) and Healing Sessions (₹2499). You can easily change the numbers below!
-const products = [
-  // --- SALTS (48 Items) ---
-  { id: 101, name: "Protection Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 102, name: "Love Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 103, name: "Cleansing Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 104, name: "Business Success Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 105, name: "Money Attract Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 106, name: "Healing Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 107, name: "Aura Boosts Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 108, name: "Psychic Attack Protection Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 109, name: "Helping Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 110, name: "Stress Relieving Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 111, name: "Full Moon Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 112, name: "Spiritually Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 113, name: "Home Protection Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 114, name: "Good Luck Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 115, name: "Blessings Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 116, name: "Purification Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 117, name: "Prosperity Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 118, name: "Valentine’s Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 119, name: "Bath Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 120, name: "Negativity Removal From Place Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 121, name: "Remove Evil Eye and Improve Health", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 122, name: "Negativity Removal From Wallet", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 123, name: "Money Mojo Bag", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 124, name: "Attract Customer and Clint’s", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 125, name: "Sleep Well Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 126, name: "Negativity Removal Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 127, name: "Balance North Direction", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 128, name: "Balance North East Direction", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 129, name: "Health and Money Flow Remedy", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 130, name: "Salt to Balance West Direction", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 131, name: "Confidence Remedy", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 132, name: "Protection Abundance Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 133, name: "Stability With Labour", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 134, name: "Protecting a Newly Weeding Couple from Evil Eye", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 135, name: "Marriage Prosperity Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 136, name: "Patching Up and Resolving Divorce Disputes Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 137, name: "Clint’s Attraction Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 138, name: "Stuck Money Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 139, name: "All Issues You’re Facing in Life Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 140, name: "Magical Energy Drink for Various Health Issues", emoji: "🥤", category: "salts", desc: "Energy-infused remedy.", price: 599, rating: 5 },
-  { id: 141, name: "Migraines Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 142, name: "Weight Loss Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 143, name: "Weight Gain Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 144, name: "Anger Management Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 145, name: "Work Not Going Well Remedy", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 146, name: "Shifting Into a New House Salt", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
-  { id: 147, name: "Remedy for Defamation", emoji: "🧂", category: "salts", desc: "Energy-infused salt.", price: 599, rating: 5 },
+// ── PRODUCT DATA ──
+// Products are loaded dynamically from /data/products.json
+// They can be managed via the Admin Dashboard → Products tab
+let products = []
 
-// --- HEALING SESSIONS (11 Items) ---
-  { id: 201, name: "Chakra Healing & Balancing", emoji: "✨", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
-  { id: 202, name: "Aura Cleaning & Energize", emoji: "💫", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
-  { id: 203, name: "Healing Your Relationships", emoji: "💖", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
-  { id: 204, name: "Build Your Financial Well-being", emoji: "📈", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
-  { id: 205, name: "Mental, Emotional & Physical Healing", emoji: "🧘‍♀️", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
-  { id: 206, name: "Overcome Fear, Anxiety, Stress, Addiction & Negativity", emoji: "🕊️", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
-  { id: 207, name: "(NLP) Neuro Linguistic Programming Therapy", emoji: "🧠", category: "healing", desc: "One-on-one personal therapy session.", price: 500, rating: 5 },
-  { id: 208, name: "Revitalizing Your Mental Strength & Energy Levels", emoji: "⚡", category: "healing", desc: "One-on-one personal healing session.", price: 500, rating: 5 },
-  { id: 209, name: "Garbh Sanskar Therapy", emoji: "🤰", category: "healing", desc: "One-on-one personal therapy session.", price: 500, rating: 5 },
-  { id: 210, name: "Pet (Animal) Healing", emoji: "🐾", category: "healing", desc: "One-on-one healing session for your pet.", price: 500, rating: 5 },
-  { id: 211, name: "Group Meditation", emoji: "🧘‍♂️", category: "healing", desc: "Join Batch 1 (5:00 AM) or Batch 2 (9:30 AM).", price: 100, rating: 5 },
-
-  // --- CANDLES (40 Items) ---
-  { id: 301, name: "Releasing Fear", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 302, name: "Fertility/ Pregnancy Healings", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 303, name: "Attract Customer/Client", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 304, name: "Stuck Money Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 305, name: "Focus in Studies", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 306, name: "Any Personal Intention", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 307, name: "Success", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 308, name: "Fame", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 309, name: "Exams", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 310, name: "Good Luck", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 311, name: "Attracting Abundance", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 312, name: "Anxiety Relief", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 313, name: "Energy Cleansing and Purification", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 314, name: "Love Attraction and Harmony", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 315, name: "Good Relationship with Parents & Children", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 316, name: "Protection Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 317, name: "Aura Booster Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 318, name: "Positivity Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 319, name: "Confidence Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 320, name: "Money Attraction Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 321, name: "Stress Relief Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 322, name: "Psychic Attack Protection Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 323, name: "Balance of 7 Chakras Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 4499, rating: 5 },
-  { id: 324, name: "Clarity", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 325, name: "Sound Sleep", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 326, name: "Relationship Healing Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 327, name: "Manifestation Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 328, name: "Attraction Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 329, name: "Evil Eye Removal Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 330, name: "Karma Cleansing and Reset Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 331, name: "New Beginning Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 332, name: "Weight Gain Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 333, name: "Weight Loss Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 334, name: "Social Media Growth Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 335, name: "Financial Growth Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 336, name: "Past Life Healing Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 337, name: "Career Success Candle", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 338, name: "Good Health", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 999, rating: 5 },
-  { id: 339, name: "Releasing Addiction", emoji: "🕯️", category: "candles", desc: "Energy-infused candle.", price: 1499, rating: 5 },
-  { id: 1000, name: "Custom Made Candle", emoji: "✨", category: "candles", desc: "Specially crafted for your unique issues.", price: 1799, rating: 5 }
-];
+// Load products from JSON file (fetched once at page load)
+async function loadProductsFromServer() {
+  try {
+    const res = await fetch('/data/products.json');
+    if (!res.ok) throw new Error('Failed to load products');
+    products = await res.json();
+    console.log(`🌿 Loaded ${products.length} products from server`);
+  } catch (err) {
+    console.error('Product load error:', err.message);
+    products = [];
+  }
+}
 
 let cart = [];
 let currentFilter = 'all';
@@ -1827,8 +1737,11 @@ function observeAnimations() {
   animateDots();
 })();
 
-// ── INIT: wire up search bar via addEventListener ──
-document.addEventListener('DOMContentLoaded', () => {
+// ── INIT: load products from server, then wire up search bar ──
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load products from JSON file first
+  await loadProductsFromServer();
+
   const searchBar = document.getElementById('searchBar');
   if (searchBar) {
     searchBar.addEventListener('keyup', searchProducts);

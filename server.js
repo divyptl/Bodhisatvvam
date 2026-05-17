@@ -10,10 +10,12 @@
 const express   = require('express');
 const axios     = require('axios');
 const path      = require('path');
+const fs        = require('fs');
 const cors      = require('cors');
 const crypto    = require('crypto'); // Built-in Node.js -- no install needed
 const rateLimit = require('express-rate-limit');
 const Razorpay  = require('razorpay');
+const multer    = require('multer');
 
 const app = express();
 
@@ -515,6 +517,236 @@ app.post('/api/admin/update-status', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Could not update status.' });
     }
 });
+
+// ═══════════════════════════════════════════════════════════
+//  PRODUCT MANAGEMENT SYSTEM
+//  All product data lives in public/data/products.json
+//  Admin can Add / Edit / Delete products + upload images
+// ═══════════════════════════════════════════════════════════
+
+const PRODUCTS_FILE = path.join(__dirname, 'public', 'data', 'products.json');
+const PRODUCT_IMAGES_DIR = path.join(__dirname, 'public', 'images', 'products');
+
+// Ensure directories exist
+if (!fs.existsSync(path.dirname(PRODUCTS_FILE))) fs.mkdirSync(path.dirname(PRODUCTS_FILE), { recursive: true });
+if (!fs.existsSync(PRODUCT_IMAGES_DIR)) fs.mkdirSync(PRODUCT_IMAGES_DIR, { recursive: true });
+
+// Helper: read products from JSON file
+function readProducts() {
+    try {
+        const raw = fs.readFileSync(PRODUCTS_FILE, 'utf-8');
+        return JSON.parse(raw);
+    } catch (err) {
+        console.error('Could not read products.json:', err.message);
+        return [];
+    }
+}
+
+// Helper: write products to JSON file
+function writeProducts(products) {
+    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2), 'utf-8');
+}
+
+// Helper: generate next ID for a given category prefix
+function generateProductId(category) {
+    const products = readProducts();
+    const prefixes = { salts: 100, healing: 200, candles: 300 };
+    const base = prefixes[category] || 400;
+    const categoryProducts = products.filter(p => p.id >= base && p.id < base + 100 && p.id !== 1000);
+    if (categoryProducts.length === 0) return base + 1;
+    const maxId = Math.max(...categoryProducts.map(p => p.id));
+    return maxId + 1;
+}
+
+// Helper: admin password check middleware
+function requireAdmin(req, res, next) {
+    const ADMIN_PASS = process.env.ADMIN_PASS;
+    const password = req.body.password || req.headers['x-admin-password'];
+    if (!ADMIN_PASS || password !== ADMIN_PASS) {
+        return res.status(401).json({ success: false, message: 'Incorrect admin password.' });
+    }
+    next();
+}
+
+// ── Multer setup for product image uploads ──
+const productImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const productId = req.params.id || req.body.productId;
+        const dir = path.join(PRODUCT_IMAGES_DIR, String(productId));
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const safeName = Date.now() + '-' + Math.floor(Math.random() * 9000 + 1000) + ext;
+        cb(null, safeName);
+    },
+});
+const uploadProductImage = multer({
+    storage: productImageStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+    fileFilter: (req, file, cb) => {
+        const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (allowed.includes(ext)) cb(null, true);
+        else cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+    },
+});
+
+// ── GET: Fetch all products (public — used by storefront) ──
+app.get('/api/products', (req, res) => {
+    const products = readProducts();
+    res.status(200).json({ success: true, products });
+});
+
+// ── POST: Add a new product (admin only) ──
+app.post('/api/admin/products/add', requireAdmin, (req, res) => {
+    const { name, category, desc, price, rating, emoji, badge } = req.body;
+    if (!name || !category || price === undefined) {
+        return res.status(400).json({ success: false, message: 'Name, category, and price are required.' });
+    }
+
+    const products = readProducts();
+    const newProduct = {
+        id: req.body.id || generateProductId(category),
+        name: name.trim(),
+        emoji: emoji || (category === 'salts' ? '🧂' : category === 'candles' ? '🕯️' : '✨'),
+        category: category.toLowerCase(),
+        desc: (desc || '').trim() || `Energy-infused ${category === 'salts' ? 'salt' : category === 'candles' ? 'candle' : 'session'}.`,
+        price: parseFloat(price),
+        rating: parseInt(rating) || 5,
+        badge: badge || '',
+        images: [],
+    };
+
+    // Ensure no duplicate ID
+    if (products.find(p => p.id === newProduct.id)) {
+        return res.status(409).json({ success: false, message: `Product with ID ${newProduct.id} already exists.` });
+    }
+
+    products.push(newProduct);
+    writeProducts(products);
+
+    // Create image directory
+    const imgDir = path.join(PRODUCT_IMAGES_DIR, String(newProduct.id));
+    if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+
+    console.log(`✅ Product added: ${newProduct.name} (ID: ${newProduct.id})`);
+    res.status(201).json({ success: true, product: newProduct });
+});
+
+// ── POST: Edit an existing product (admin only) ──
+app.post('/api/admin/products/edit', requireAdmin, (req, res) => {
+    const { id, name, category, desc, price, rating, emoji, badge } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Product ID is required.' });
+
+    const products = readProducts();
+    const idx = products.findIndex(p => p.id === parseInt(id));
+    if (idx === -1) return res.status(404).json({ success: false, message: 'Product not found.' });
+
+    // Only update fields that are provided
+    if (name !== undefined)     products[idx].name     = name.trim();
+    if (category !== undefined) products[idx].category = category.toLowerCase();
+    if (desc !== undefined)     products[idx].desc     = desc.trim();
+    if (price !== undefined)    products[idx].price    = parseFloat(price);
+    if (rating !== undefined)   products[idx].rating   = parseInt(rating);
+    if (emoji !== undefined)    products[idx].emoji    = emoji;
+    if (badge !== undefined)    products[idx].badge    = badge;
+
+    writeProducts(products);
+    console.log(`✅ Product updated: ${products[idx].name} (ID: ${id})`);
+    res.status(200).json({ success: true, product: products[idx] });
+});
+
+// ── POST: Delete a product (admin only) ──
+app.post('/api/admin/products/delete', requireAdmin, (req, res) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Product ID is required.' });
+
+    let products = readProducts();
+    const product = products.find(p => p.id === parseInt(id));
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
+
+    products = products.filter(p => p.id !== parseInt(id));
+    writeProducts(products);
+
+    console.log(`🗑️ Product deleted: ${product.name} (ID: ${id})`);
+    res.status(200).json({ success: true, message: `"${product.name}" has been deleted.` });
+});
+
+// ── POST: Upload image(s) for a product (admin only) ──
+app.post('/api/admin/products/:id/upload-image',
+    (req, res, next) => {
+        // Check admin password from header before multer processes the file
+        const ADMIN_PASS = process.env.ADMIN_PASS;
+        const password = req.headers['x-admin-password'];
+        if (!ADMIN_PASS || password !== ADMIN_PASS) {
+            return res.status(401).json({ success: false, message: 'Incorrect admin password.' });
+        }
+        next();
+    },
+    uploadProductImage.array('images', 5),
+    (req, res) => {
+        const productId = parseInt(req.params.id);
+        const products = readProducts();
+        const product = products.find(p => p.id === productId);
+        if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
+
+        const uploadedPaths = req.files.map(f => `/images/products/${productId}/${f.filename}`);
+        product.images = [...(product.images || []), ...uploadedPaths];
+        writeProducts(products);
+
+        console.log(`📸 ${uploadedPaths.length} image(s) uploaded for product ${productId}`);
+        res.status(200).json({ success: true, images: product.images });
+    }
+);
+
+// ── POST: Delete a specific image from a product (admin only) ──
+app.post('/api/admin/products/:id/delete-image', requireAdmin, (req, res) => {
+    const productId = parseInt(req.params.id);
+    const { imagePath } = req.body;
+    if (!imagePath) return res.status(400).json({ success: false, message: 'Image path is required.' });
+
+    const products = readProducts();
+    const product = products.find(p => p.id === productId);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
+
+    // Remove from product images array
+    product.images = (product.images || []).filter(img => img !== imagePath);
+    writeProducts(products);
+
+    // Delete the physical file
+    const fullPath = path.join(__dirname, 'public', imagePath);
+    if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+        console.log(`🗑️ Image deleted: ${imagePath}`);
+    }
+
+    res.status(200).json({ success: true, images: product.images });
+});
+
+// ── POST: Bulk update prices (admin only) ──
+app.post('/api/admin/products/bulk-update-price', requireAdmin, (req, res) => {
+    const { updates } = req.body; // Array of { id, price }
+    if (!updates || !Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ success: false, message: 'Updates array is required.' });
+    }
+
+    const products = readProducts();
+    let updatedCount = 0;
+    updates.forEach(({ id, price }) => {
+        const product = products.find(p => p.id === parseInt(id));
+        if (product && price !== undefined) {
+            product.price = parseFloat(price);
+            updatedCount++;
+        }
+    });
+    writeProducts(products);
+
+    console.log(`✅ Bulk price update: ${updatedCount} products updated`);
+    res.status(200).json({ success: true, message: `${updatedCount} product(s) updated.` });
+});
+
 
 // -- 8. HEALTH CHECK ------------------------------------------------------
 app.get('/health', (req, res) => {
