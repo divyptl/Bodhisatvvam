@@ -434,6 +434,17 @@ app.post('/api/verify-booking', orderLimiter, async (req, res) => {
 });
 
 
+// ── ADMIN: Login validation ────────────────────────────────
+// Validates admin password server-side so it's never exposed in client code
+app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body;
+    const ADMIN_PASS = process.env.ADMIN_PASS;
+    if (!ADMIN_PASS || password !== ADMIN_PASS) {
+        return res.status(401).json({ success: false, message: 'Incorrect password.' });
+    }
+    return res.status(200).json({ success: true, message: 'Login successful.' });
+});
+
 // ── ADMIN: Fetch orders (proxies Google Sheet) ────────────
 // admin.html calls this instead of Google Script directly
 // so CSP doesn't block it (Google Script is server-to-server here)

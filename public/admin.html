@@ -324,7 +324,6 @@
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 const API_BASE       = 'https://bodhisatvvam.onrender.com'; 
-const ADMIN_PASSWORD = 'Divy@969P'; 
 
 // ── STATE ─────────────────────────────────────────────────
 let allOrders   = [];
@@ -334,19 +333,30 @@ let sortKey     = 'date';
 let sortDir     = -1; // -1 = newest first
 
 // ── AUTH ──────────────────────────────────────────────────
-function login() {
+async function login() {
   const input = document.getElementById('passwordInput').value;
-  if (input === ADMIN_PASSWORD) {
-    sessionStorage.setItem('bdh_admin', 'true');
-    sessionStorage.setItem('bdh_pass', input);
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('dashboard').style.display = 'block';
-    setTimeout(() => { document.getElementById('loginScreen').style.display = 'none'; }, 400);
-    loadData();
-  } else {
+  if (!input) { document.getElementById('loginError').style.display = 'block'; return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: input })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      sessionStorage.setItem('bdh_admin', 'true');
+      sessionStorage.setItem('bdh_pass', input);
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('dashboard').style.display = 'block';
+      setTimeout(() => { document.getElementById('loginScreen').style.display = 'none'; }, 400);
+      loadData();
+    } else {
+      document.getElementById('loginError').style.display = 'block';
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('passwordInput').focus();
+    }
+  } catch (err) {
+    document.getElementById('loginError').textContent = 'Connection error. Please try again.';
     document.getElementById('loginError').style.display = 'block';
-    document.getElementById('passwordInput').value = '';
-    document.getElementById('passwordInput').focus();
   }
 }
 

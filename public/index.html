@@ -487,6 +487,11 @@
     background: linear-gradient(135deg, var(--cream) 0%, var(--cream-dark) 100%);
     display: flex; align-items: center; justify-content: center;
   }
+  .product-img-wrap img.product-photo {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .product-card:hover .product-photo { transform: scale(1.08); }
   .product-emoji { font-size: 5rem; transition: transform 0.4s; }
   .product-card:hover .product-emoji { transform: scale(1.1) rotate(-5deg); }
   .product-img-overlay {
@@ -661,7 +666,10 @@
   .cart-item-img {
     width: 70px; height: 70px; background: var(--cream-dark);
     display: flex; align-items: center; justify-content: center;
-    font-size: 2rem;
+    font-size: 2rem; overflow: hidden;
+  }
+  .cart-item-img img {
+    width: 100%; height: 100%; object-fit: cover;
   }
   .cart-item-name {
     font-family: 'Cormorant Garamond', serif;
@@ -901,6 +909,63 @@
   }
   .fade-in-up.visible { opacity: 1; transform: translateY(0); }
 
+  /* ── TESTIMONIALS ── */
+  .testimonials-section { padding: 100px 60px; background: var(--forest); position: relative; overflow: hidden; }
+  .testimonials-section::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(168,197,170,0.1) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(212,170,96,0.08) 0%, transparent 50%); }
+  .testimonials-header { text-align: center; margin-bottom: 60px; position: relative; z-index: 1; }
+  .testimonials-header .section-tag { justify-content: center; color: var(--gold); }
+  .testimonials-header .section-tag::before { background: var(--gold); }
+  .testimonials-header .section-title { color: var(--cream); }
+  .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; position: relative; z-index: 1; }
+  .testimonial-card { background: rgba(245,239,227,0.06); border: 1px solid rgba(212,170,96,0.15); padding: 36px 28px; transition: border-color 0.3s, transform 0.3s; }
+  .testimonial-card:hover { border-color: rgba(212,170,96,0.4); transform: translateY(-6px); }
+  .testimonial-stars { color: var(--gold); font-size: 0.85rem; letter-spacing: 2px; margin-bottom: 16px; }
+  .testimonial-text { font-size: 0.92rem; color: rgba(245,239,227,0.75); line-height: 1.8; font-style: italic; margin-bottom: 24px; }
+  .testimonial-author { display: flex; align-items: center; gap: 12px; }
+  .testimonial-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(212,170,96,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--gold); }
+  .testimonial-name { font-size: 0.85rem; color: var(--cream); font-weight: 500; }
+  .testimonial-location { font-size: 0.72rem; color: var(--sage); }
+
+  /* ── WHATSAPP FLOATING BUTTON ── */
+  .whatsapp-float { position: fixed; bottom: 28px; left: 28px; z-index: 1500; width: 56px; height: 56px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(37,211,102,0.4); transition: transform 0.3s, box-shadow 0.3s; text-decoration: none; cursor: none; }
+  .whatsapp-float:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(37,211,102,0.5); }
+  .whatsapp-float svg { width: 28px; height: 28px; fill: white; }
+  .whatsapp-float .wa-tooltip { position: absolute; left: 68px; background: var(--forest); color: var(--cream); padding: 8px 16px; font-size: 0.78rem; letter-spacing: 0.05em; white-space: nowrap; opacity: 0; transform: translateX(-8px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; }
+  .whatsapp-float:hover .wa-tooltip { opacity: 1; transform: translateX(0); }
+
+  /* ── HAMBURGER MENU ── */
+  .hamburger { display: none; background: none; border: none; cursor: none; padding: 4px; flex-direction: column; gap: 5px; z-index: 1001; }
+  .hamburger span { display: block; width: 24px; height: 2px; background: var(--forest); transition: all 0.3s; }
+  .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+  .hamburger.active span:nth-child(2) { opacity: 0; }
+  .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+  .mobile-menu { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(245,239,227,0.98); backdrop-filter: blur(20px); z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 32px; opacity: 0; pointer-events: none; transition: opacity 0.35s; }
+  .mobile-menu.open { display: flex; opacity: 1; pointer-events: all; }
+  .mobile-menu a { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--forest); text-decoration: none; font-weight: 400; letter-spacing: 0.05em; transition: color 0.2s; }
+  .mobile-menu a:hover { color: var(--amber); }
+
+  /* ── LOADING SKELETON ── */
+  .skeleton-card { background: white; overflow: hidden; }
+  .skeleton-img { height: 260px; background: linear-gradient(110deg, var(--cream-dark) 8%, var(--cream) 18%, var(--cream-dark) 33%); background-size: 200% 100%; animation: shimmer 1.5s linear infinite; }
+  .skeleton-body { padding: 24px; }
+  .skeleton-line { height: 14px; background: linear-gradient(110deg, var(--cream-dark) 8%, var(--cream) 18%, var(--cream-dark) 33%); background-size: 200% 100%; animation: shimmer 1.5s linear infinite; margin-bottom: 10px; border-radius: 4px; }
+  .skeleton-line.short { width: 40%; }
+  .skeleton-line.medium { width: 70%; }
+  .skeleton-line.price { width: 30%; height: 20px; margin-top: 16px; }
+  @keyframes shimmer { to { background-position-x: -200%; } }
+
+  /* ── QV IMAGE CAROUSEL ── */
+  .qv-carousel { position: relative; width: 100%; margin-bottom: 20px; overflow: hidden; }
+  .qv-carousel-track { display: flex; transition: transform 0.4s ease; }
+  .qv-carousel-track img { width: 100%; max-height: 280px; object-fit: cover; flex-shrink: 0; }
+  .qv-carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(28,58,40,0.7); color: var(--cream); border: none; width: 36px; height: 36px; font-size: 1.1rem; cursor: none; transition: background 0.2s; display: flex; align-items: center; justify-content: center; z-index: 5; }
+  .qv-carousel-btn:hover { background: var(--forest); }
+  .qv-carousel-btn.prev { left: 8px; }
+  .qv-carousel-btn.next { right: 8px; }
+  .qv-carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+  .qv-carousel-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cream-dark); border: 1px solid var(--sage); cursor: none; transition: background 0.2s; }
+  .qv-carousel-dots .dot.active { background: var(--amber); border-color: var(--amber); }
+
   /* ── RESPONSIVE BASICS ── */
   @media (max-width: 1024px) {
     .hero { grid-template-columns: 1fr; min-height: auto; }
@@ -909,12 +974,19 @@
     .about { grid-template-columns: 1fr; }
     .products-grid { grid-template-columns: repeat(2, 1fr); }
     .footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
+    .testimonials-grid { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 680px) {
     .products-grid { grid-template-columns: 1fr; }
     .nav-links { display: none; }
+    .hamburger { display: flex; }
     .hero-stats { flex-wrap: wrap; gap: 24px; }
     .form-row { grid-template-columns: 1fr; }
+    .testimonials-grid { grid-template-columns: 1fr; }
+    .testimonials-section { padding: 60px 24px; }
+    .whatsapp-float { bottom: 20px; left: 20px; width: 50px; height: 50px; }
+    .whatsapp-float svg { width: 24px; height: 24px; }
+    .whatsapp-float .wa-tooltip { display: none; }
   }
 </style>
 </head>
@@ -937,8 +1009,18 @@
       🌿 Cart
       <div class="cart-count" id="cartCount">0</div>
     </button>
+    <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#products" onclick="toggleMobileMenu()">Shop</a>
+  <a href="#about" onclick="toggleMobileMenu()">Our Story</a>
+  <a href="#contact" onclick="toggleMobileMenu()">Contact</a>
+  <button class="btn-primary" style="margin-top:20px;cursor:none;" onclick="toggleMobileMenu(); toggleCart();">🌿 View Cart</button>
+</div>
 
 <section class="hero">
   <div class="hero-left">
@@ -1048,15 +1130,27 @@
   </div>
 <div class="search-container" style="text-align: center; margin: 20px 0;">
     <input type="text" id="searchBar" placeholder="🔍 Search for candles, salts, energy..." style="width: 80%; max-width: 400px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"></div>
-  <div class="products-grid" id="productsGrid"></div>
+  <div class="products-grid" id="productsGrid">
+    <!-- Loading skeletons shown on initial load -->
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line price"></div></div></div>
+  </div>
 
   <div class="load-more-wrap" id="loadMoreWrap">
     <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()">Show More Products</button>
   </div>
   </section>
 
-<section class="featured-banner fade-in-up" id="featured">
-     
+<section class="consultation-banner fade-in-up" style="background: var(--cream); padding: 80px 40px; text-align: center; border-top: 1px solid var(--cream-dark);">
+  <h2 style="font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 3vw, 3rem); color: var(--forest); margin-bottom: 16px;">Unsure Where to Start?</h2>
+  <p style="font-size: 1rem; color: var(--text-mid); max-width: 600px; margin: 0 auto 32px; line-height: 1.6;">Every healing journey is unique. Connect with Neepa for a <strong>Free Consultation</strong> to find the right path and remedies tailored specifically for your energy needs.</p>
+  <button class="btn-primary" style="cursor:none;" onclick="window.location.href='/booking.html?session=Free+Consultation'">Book Free Consultation</button>
 </section>
 
 <section class="featured-banner fade-in-up" id="featured">
@@ -1068,7 +1162,7 @@
       <span class="banner-new-price">₹1799</span>
     </div>
     <div class="custom-candle-options" style="margin-bottom: 15px; text-align: left;">
-  <label for="candle-notes" style="display: block; font-size: 14px; margin-bottom: 5px; font-weight: bold;">What issues or intentions should this candle focus on?</label>
+  <label for="candle-notes" style="display: block; font-size: 14px; margin-bottom: 5px; font-weight: bold; color: var(--cream);">What issues or intentions should this candle focus on?</label>
   <textarea id="candle-notes" placeholder="e.g., career growth, peace, focus, health..." rows="3" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-family: inherit; resize: vertical;"></textarea>
 </div>
     <button class="btn-primary" onclick="addToCart(1000, event)">Add to Cart</button>
@@ -1080,6 +1174,70 @@
     </div>
   </div>
 </section>
+
+<!-- ── TESTIMONIALS SECTION ── -->
+<section class="testimonials-section fade-in-up" id="testimonials">
+  <div class="testimonials-header">
+    <div class="section-tag">What Our Clients Say</div>
+    <h2 class="section-title">Transformative <em>experiences</em></h2>
+  </div>
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"After just one session with Neepa, I felt a shift in my energy that I hadn't experienced in years. The chakra healing brought me clarity and peace I didn't know was possible."</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">A</div>
+        <div><div class="testimonial-name">Ananya S.</div><div class="testimonial-location">Mumbai, Maharashtra</div></div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"The Protection Salt has been incredible for my home. The energy of our entire house shifted within days. My family noticed it too — calmer, more harmonious."</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">R</div>
+        <div><div class="testimonial-name">Rajesh M.</div><div class="testimonial-location">Surat, Gujarat</div></div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"I was skeptical at first, but the NLP therapy session changed my perspective entirely. I've overcome anxiety that held me back for years. Truly grateful."</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">P</div>
+        <div><div class="testimonial-name">Priya K.</div><div class="testimonial-location">Ahmedabad, Gujarat</div></div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"The custom-made candle Neepa created for my business intention started showing results within the first week. My client inquiries doubled!"</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">D</div>
+        <div><div class="testimonial-name">Deepak T.</div><div class="testimonial-location">Pune, Maharashtra</div></div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"The Garbh Sanskar therapy was a beautiful experience. Neepa's gentle guidance during my pregnancy brought so much positivity. My baby is healthy and happy!"</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">S</div>
+        <div><div class="testimonial-name">Sneha J.</div><div class="testimonial-location">Vadodara, Gujarat</div></div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      <p class="testimonial-text">"I've been using the Money Attract Salt for 3 months now. The financial blocks I was facing have slowly but surely dissolved. Highly recommend Bodhisatvvam."</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">V</div>
+        <div><div class="testimonial-name">Vikram P.</div><div class="testimonial-location">Delhi, NCR</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── WHATSAPP FLOATING BUTTON ── -->
+<a href="https://wa.me/919737171090" target="_blank" class="whatsapp-float" aria-label="Chat on WhatsApp">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  <span class="wa-tooltip">Chat with us on WhatsApp</span>
+</a>
 
 <footer id="contact">
   <div class="footer-grid">
@@ -1093,6 +1251,7 @@
         <li><a href="#products">Energy-infused Salts</a></li>
         <li><a href="#products">Energy-infused Candles</a></li>
         <li><a href="#products">One-on-One Healing</a></li>
+        <li><a href="#testimonials">Testimonials</a></li>
       </ul>
     </div>
     <div>
@@ -1223,13 +1382,19 @@ let products = []
 // Load products from JSON file (fetched once at page load)
 async function loadProductsFromServer() {
   try {
-    const res = await fetch('/data/products.json');
+    // Use API endpoint instead of static JSON so images are always fresh
+    const res = await fetch('/api/products');
     if (!res.ok) throw new Error('Failed to load products');
-    products = await res.json();
+    const data = await res.json();
+    products = data.success ? data.products : [];
     console.log(`🌿 Loaded ${products.length} products from server`);
   } catch (err) {
     console.error('Product load error:', err.message);
-    products = [];
+    // Fallback to static JSON file
+    try {
+      const fallback = await fetch('/data/products.json');
+      if (fallback.ok) products = await fallback.json();
+    } catch (e) { products = []; }
   }
 }
 
@@ -1263,6 +1428,7 @@ function filterProducts(filter, btn) {
   visibleCount = PRODUCTS_PER_PAGE; // Reset to 12 when tab changes
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
+  updatePageMeta(filter);
   renderProducts(filter);
 }
 
@@ -1278,10 +1444,15 @@ function renderProducts(filter) {
 
   count.textContent = `Showing ${visible.length} of ${filtered.length} offering${filtered.length !== 1 ? 's' : ''}`;
 
-  grid.innerHTML = visible.map(p => `
+  grid.innerHTML = visible.map(p => {
+    const hasImg = p.images && p.images.length > 0;
+    const imgContent = hasImg
+      ? `<img class="product-photo" src="${p.images[0]}" alt="${p.name}" loading="lazy">`
+      : `<span class="product-emoji">${p.emoji}</span>`;
+    return `
     <div class="product-card fade-in-up" data-id="${p.id}">
       <div class="product-img-wrap">
-        <span class="product-emoji">${p.emoji}</span>
+        ${imgContent}
         <div class="product-img-overlay"></div>
         <button class="quick-view-trigger" onclick="openQuickView(${p.id}, event)">Quick View</button>
         <div class="card-actions">
@@ -1297,8 +1468,8 @@ function renderProducts(filter) {
           <div class="star-rating">${'⭐'.repeat(p.rating)}</div>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // RESTORED LOAD MORE BUTTON DISPLAY LOGIC 👇
   const wrap = document.getElementById('loadMoreWrap');
@@ -1306,12 +1477,7 @@ function renderProducts(filter) {
 
   observeAnimations();
 }
-function filterProducts(filter, btn) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  renderProducts(filter);
-}
+// (duplicate filterProducts removed — the primary one is above at line ~1280)
 function openQuickView(id, event) {
   if(event) event.stopPropagation();
   const p = products.find(prod => prod.id === id);
@@ -1320,9 +1486,30 @@ function openQuickView(id, event) {
   const content = document.getElementById('quickViewContent');
   const catName = p.category.charAt(0).toUpperCase() + p.category.slice(1);
   const btnText = p.category === 'healing' ? '🌿 Book Session' : '🛒 Add to Cart';
+  const hasImg = p.images && p.images.length > 0;
+
+  let qvVisual;
+  if (hasImg && p.images.length > 1) {
+    // Multi-image carousel
+    qvVisual = `
+      <div class="qv-carousel" id="qvCarousel">
+        <div class="qv-carousel-track" id="qvTrack" style="width:${p.images.length * 100}%">
+          ${p.images.map(img => `<img src="${img}" alt="${p.name}" style="width:${100 / p.images.length}%">`).join('')}
+        </div>
+        <button class="qv-carousel-btn prev" onclick="qvSlide(-1)">‹</button>
+        <button class="qv-carousel-btn next" onclick="qvSlide(1)">›</button>
+        <div class="qv-carousel-dots" id="qvDots">
+          ${p.images.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}" onclick="qvGoTo(${i})"></span>`).join('')}
+        </div>
+      </div>`;
+  } else if (hasImg) {
+    qvVisual = `<img src="${p.images[0]}" alt="${p.name}" style="width:100%;max-height:280px;object-fit:cover;margin-bottom:20px;">`;
+  } else {
+    qvVisual = `<span class="qv-emoji">${p.emoji}</span>`;
+  }
 
   content.innerHTML = `
-    <span class="qv-emoji">${p.emoji}</span>
+    ${qvVisual}
     <div class="product-category" style="margin-bottom:8px;">${catName}</div>
     <div class="qv-title">${p.name}</div>
     <div class="star-rating" style="justify-content:center; margin-bottom:12px;">${'⭐'.repeat(p.rating)}</div>
@@ -1330,6 +1517,11 @@ function openQuickView(id, event) {
     <div class="qv-desc">${p.desc}</div>
     <button class="btn-primary" onclick="addToCart(${p.id}, event); closeQuickView();" style="width:100%; cursor:none;">${btnText}</button>
   `;
+
+  // Reset carousel state
+  window._qvSlideIdx = 0;
+  window._qvSlideCount = hasImg ? p.images.length : 0;
+
   document.getElementById('quickViewOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -1416,9 +1608,14 @@ function updateCart() {
   }
 
   footer.style.display = 'block';
-  body.innerHTML = cart.map(item => `
+  body.innerHTML = cart.map(item => {
+    const hasImg = item.images && item.images.length > 0;
+    const cartVisual = hasImg
+      ? `<img src="${item.images[0]}" alt="${item.name}">`
+      : item.emoji;
+    return `
     <div class="cart-item">
-      <div class="cart-item-img">${item.emoji}</div>
+      <div class="cart-item-img">${cartVisual}</div>
       <div>
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">₹${item.price.toFixed(2)} each</div>
@@ -1432,8 +1629,8 @@ function updateCart() {
         <div class="cart-item-subtotal">₹${(item.price * item.qty).toFixed(2)}</div>
         <button class="cart-item-remove" onclick="removeFromCart(${item.id})">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function changeQty(id, delta) {
@@ -1484,7 +1681,7 @@ function closeCheckout() {
 // ── BACKEND CONNECTION ──
 // ⚠️ Replace this with your actual Render URL — the ONLY place you need to change it.
 // ⚠️ Replace with your actual Render URL — only place you need to change it
-const API_BASE = 'https://YOUR-RENDER-APP-NAME.onrender.com';
+const API_BASE = 'https://bodhisatvvam.onrender.com';
 
 // ── HELPERS ──────────────────────────────────────────────────
 
@@ -1737,9 +1934,49 @@ function observeAnimations() {
   animateDots();
 })();
 
+// ── MOBILE MENU ──
+function toggleMobileMenu() {
+  const menu = document.getElementById('mobileMenu');
+  const btn  = document.getElementById('hamburgerBtn');
+  const isOpen = menu.classList.contains('open');
+  menu.classList.toggle('open');
+  btn.classList.toggle('active');
+  document.body.style.overflow = isOpen ? '' : 'hidden';
+}
+
+// ── QUICK VIEW CAROUSEL ──
+function qvSlide(dir) {
+  const total = window._qvSlideCount || 0;
+  if (total < 2) return;
+  window._qvSlideIdx = (window._qvSlideIdx + dir + total) % total;
+  qvGoTo(window._qvSlideIdx);
+}
+function qvGoTo(idx) {
+  window._qvSlideIdx = idx;
+  const track = document.getElementById('qvTrack');
+  const dots  = document.querySelectorAll('#qvDots .dot');
+  if (track) track.style.transform = `translateX(-${(idx / window._qvSlideCount) * 100}%)`;
+  dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+// ── DYNAMIC PAGE TITLE ON FILTER ──
+const _categoryLabels = { all: 'All Products', salts: 'Energy Salts', candles: 'Infused Candles', healing: 'Personal Healing Sessions' };
+function updatePageMeta(filter) {
+  const label = _categoryLabels[filter] || 'Shop';
+  document.title = `${label} — Bodhisatvvam | Energy Healing, Infused Salts & Candles`;
+  const desc = document.querySelector('meta[name="description"]');
+  if (desc && filter !== 'all') {
+    const descMap = {
+      salts:   'Browse our energy-infused healing salts — Protection, Love, Prosperity & more. Handcrafted by Neepa Patel.',
+      candles: 'Explore Bodhisatvvam\'s energy-infused candles — charged with specific intentions to manifest your desires.',
+      healing: 'Book a one-on-one personal healing session with Neepa Patel — Pranic Healing, NLP Therapy & Chakra Balancing.'
+    };
+    desc.setAttribute('content', descMap[filter] || desc.getAttribute('content'));
+  }
+}
+
 // ── INIT: load products from server, then wire up search bar ──
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load products from JSON file first
   await loadProductsFromServer();
 
   const searchBar = document.getElementById('searchBar');
