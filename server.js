@@ -81,7 +81,36 @@ const orderLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { success: false, message: 'Too many login attempts. Please wait 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const adminSessions = new Set();
+
 // -- 5. HELPERS -----------------------------------------------------------
+const PRODUCTS_FILE = path.join(__dirname, 'public', 'data', 'products.json');
+const PRODUCT_IMAGES_DIR = path.join(__dirname, 'public', 'images', 'products');
+
+function readProducts() {
+    try {
+        if (!fs.existsSync(PRODUCTS_FILE)) return [];
+        const raw = fs.readFileSync(PRODUCTS_FILE, 'utf-8');
+        return JSON.parse(raw);
+    } catch (err) {
+        console.error('Could not read products.json:', err.message);
+        return [];
+    }
+}
+
+function writeProducts(products) {
+    if (!fs.existsSync(path.dirname(PRODUCTS_FILE))) fs.mkdirSync(path.dirname(PRODUCTS_FILE), { recursive: true });
+    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2), 'utf-8');
+}
+
 function generateOrderId() {
     const ts  = Date.now().toString(36).toUpperCase();
     const rnd = Math.floor(1000 + Math.random() * 9000);
@@ -204,10 +233,28 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
     }
 
-    const bodhiOrderId = generateOrderId(); // Our internal ID
-    const amountPaise  = toPaise(total);
+    // Securely calculate total from server-side database
+    const products = readProducts();
+    let calculatedTotal = 0;
+    if (!Array.isArray(items)) {
+        return res.status(400).json({ success: false, message: 'Invalid items format.' });
+    }
+    
+    for (const item of items) {
+        const product = products.find(p => p.id === item.id);
+        if (product) {
+            calculatedTotal += product.price * (item.qty || 1);
+            item.price = product.price; // Update client's payload with authoritative price
+            item.name = product.name;   // Sanitize name
+        } else {
+            return res.status(400).json({ success: false, message: `Invalid product in cart: ${item.id}` });
+        }
+    }
 
-    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${amountPaise / 100}`);
+    const bodhiOrderId = generateOrderId(); // Our internal ID
+    const amountPaise  = Math.round(calculatedTotal * 100);
+
+    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${amountPaise / 100} (Client total: ${total})`);
 
     try {
         const rzpOrder = await razorpay.orders.create({
@@ -435,28 +482,47 @@ app.post('/api/verify-booking', orderLimiter, async (req, res) => {
 
 
 // ── ADMIN: Login validation ────────────────────────────────
-// Validates admin password server-side so it's never exposed in client code
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', adminLimiter, (req, res) => {
     const { password } = req.body;
     const ADMIN_PASS = process.env.ADMIN_PASS;
-    if (!ADMIN_PASS || password !== ADMIN_PASS) {
+    
+    if (!ADMIN_PASS || !password) {
         return res.status(401).json({ success: false, message: 'Incorrect password.' });
     }
-    return res.status(200).json({ success: true, message: 'Login successful.' });
+
+    // Prevent timing attacks
+    const expectedBuf = crypto.createHash('sha256').update(ADMIN_PASS).digest();
+    const providedBuf = crypto.createHash('sha256').update(password).digest();
+    
+    if (!crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+        return res.status(401).json({ success: false, message: 'Incorrect password.' });
+    }
+    
+    // Generate secure session token
+    const token = crypto.randomBytes(32).toString('hex');
+    adminSessions.add(token);
+
+    return res.status(200).json({ success: true, message: 'Login successful.', token });
 });
 
-// ── ADMIN: Fetch orders (proxies Google Sheet) ────────────
-// admin.html calls this instead of Google Script directly
-// so CSP doesn't block it (Google Script is server-to-server here)
-app.post('/api/admin/orders', async (req, res) => {
-    const { password } = req.body;
-
-    // Check admin password
-    const ADMIN_PASS = process.env.ADMIN_PASS;
-    if (!ADMIN_PASS || password !== ADMIN_PASS) {
-        return res.status(401).json({ success: false, message: 'Incorrect password.' });
+// Middleware for Admin routes
+function requireAdmin(req, res, next) {
+    const authHeader = req.headers.authorization;
+    let token = '';
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else {
+        token = req.body.token || req.headers['x-admin-token'];
     }
+    
+    if (!token || !adminSessions.has(token)) {
+        return res.status(401).json({ success: false, message: 'Unauthorized session.' });
+    }
+    next();
+}
 
+// ── ADMIN: Fetch orders (proxies Google Sheet) ────────────
+app.post('/api/admin/orders', requireAdmin, async (req, res) => {
     if (!GOOGLE_SCRIPT_URL) {
         return res.status(503).json({ success: false, message: 'Google Script not configured.' });
     }
@@ -473,14 +539,7 @@ app.post('/api/admin/orders', async (req, res) => {
     }
 });
 // ── ADMIN: Fetch bookings (proxies Google Sheet) ────────────
-app.post('/api/admin/bookings', async (req, res) => {
-    const { password } = req.body;
-
-    const ADMIN_PASS = process.env.ADMIN_PASS;
-    if (!ADMIN_PASS || password !== ADMIN_PASS) {
-        return res.status(401).json({ success: false, message: 'Incorrect password.' });
-    }
-
+app.post('/api/admin/bookings', requireAdmin, async (req, res) => {
     if (!GOOGLE_SCRIPT_URL) {
         return res.status(503).json({ success: false, message: 'Google Script not configured.' });
     }
@@ -498,13 +557,8 @@ app.post('/api/admin/bookings', async (req, res) => {
 });
 
 // ── ADMIN: Update order status ────────────────────────────
-app.post('/api/admin/update-status', async (req, res) => {
-    const { password, orderId, status } = req.body;
-
-    const ADMIN_PASS = process.env.ADMIN_PASS;
-    if (!ADMIN_PASS || password !== ADMIN_PASS) {
-        return res.status(401).json({ success: false, message: 'Incorrect password.' });
-    }
+app.post('/api/admin/update-status', requireAdmin, async (req, res) => {
+    const { orderId, status } = req.body;
 
     const validStatuses = ['New Order', 'Paid', 'Dispatched', 'Delivered', 'Cancelled'];
     if (!orderId || !validStatuses.includes(status)) {
@@ -535,28 +589,9 @@ app.post('/api/admin/update-status', async (req, res) => {
 //  Admin can Add / Edit / Delete products + upload images
 // ═══════════════════════════════════════════════════════════
 
-const PRODUCTS_FILE = path.join(__dirname, 'public', 'data', 'products.json');
-const PRODUCT_IMAGES_DIR = path.join(__dirname, 'public', 'images', 'products');
-
 // Ensure directories exist
 if (!fs.existsSync(path.dirname(PRODUCTS_FILE))) fs.mkdirSync(path.dirname(PRODUCTS_FILE), { recursive: true });
 if (!fs.existsSync(PRODUCT_IMAGES_DIR)) fs.mkdirSync(PRODUCT_IMAGES_DIR, { recursive: true });
-
-// Helper: read products from JSON file
-function readProducts() {
-    try {
-        const raw = fs.readFileSync(PRODUCTS_FILE, 'utf-8');
-        return JSON.parse(raw);
-    } catch (err) {
-        console.error('Could not read products.json:', err.message);
-        return [];
-    }
-}
-
-// Helper: write products to JSON file
-function writeProducts(products) {
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2), 'utf-8');
-}
 
 // Helper: generate next ID for a given category prefix
 function generateProductId(category) {
@@ -567,16 +602,6 @@ function generateProductId(category) {
     if (categoryProducts.length === 0) return base + 1;
     const maxId = Math.max(...categoryProducts.map(p => p.id));
     return maxId + 1;
-}
-
-// Helper: admin password check middleware
-function requireAdmin(req, res, next) {
-    const ADMIN_PASS = process.env.ADMIN_PASS;
-    const password = req.body.password || req.headers['x-admin-password'];
-    if (!ADMIN_PASS || password !== ADMIN_PASS) {
-        return res.status(401).json({ success: false, message: 'Incorrect admin password.' });
-    }
-    next();
 }
 
 // ── Multer setup for product image uploads ──
@@ -687,15 +712,7 @@ app.post('/api/admin/products/delete', requireAdmin, (req, res) => {
 
 // ── POST: Upload image(s) for a product (admin only) ──
 app.post('/api/admin/products/:id/upload-image',
-    (req, res, next) => {
-        // Check admin password from header before multer processes the file
-        const ADMIN_PASS = process.env.ADMIN_PASS;
-        const password = req.headers['x-admin-password'];
-        if (!ADMIN_PASS || password !== ADMIN_PASS) {
-            return res.status(401).json({ success: false, message: 'Incorrect admin password.' });
-        }
-        next();
-    },
+    requireAdmin,
     uploadProductImage.array('images', 5),
     (req, res) => {
         const productId = parseInt(req.params.id);
@@ -722,12 +739,17 @@ app.post('/api/admin/products/:id/delete-image', requireAdmin, (req, res) => {
     const product = products.find(p => p.id === productId);
     if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
 
+    // Path traversal fix
+    const fullPath = path.resolve(path.join(__dirname, 'public', imagePath));
+    const expectedDir = path.resolve(PRODUCT_IMAGES_DIR);
+    if (!fullPath.startsWith(expectedDir)) {
+        return res.status(403).json({ success: false, message: 'Invalid path.' });
+    }
+
     // Remove from product images array
     product.images = (product.images || []).filter(img => img !== imagePath);
     writeProducts(products);
 
-    // Delete the physical file
-    const fullPath = path.join(__dirname, 'public', imagePath);
     if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
         console.log(`🗑️ Image deleted: ${imagePath}`);
@@ -759,7 +781,52 @@ app.post('/api/admin/products/bulk-update-price', requireAdmin, (req, res) => {
 });
 
 
+
+// -- FREE CONSULTATION BOOKING (no payment needed) ------------------
+app.post('/api/book-free', orderLimiter, async (req, res) => {
+    const { sessionId, sessionName, date, slot, name, phone, email, notes } = req.body;
+
+    if (!sessionId || !date || !slot || !name || !phone) {
+        return res.status(400).json({ success: false, message: 'Missing required fields.' });
+    }
+
+    const bookingId = 'BDH-FREE-' + Date.now().toString(36).toUpperCase();
+    const timestamp = new Date().toISOString();
+
+    try {
+        // Log to Google Sheet
+        if (GOOGLE_SCRIPT_URL) {
+            await axios.post(GOOGLE_SCRIPT_URL, {
+                secret: GOOGLE_SCRIPT_SECRET,
+                type: 'booking',
+                bookingId, sessionName, date, slot,
+                name, phone, email, notes,
+                price: '0 (Free Consultation)', timestamp,
+            }).catch(e => console.warn('Sheet log failed:', e.message));
+        }
+
+        // WhatsApp notification to admin
+        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
+            const msg = `🎁 *New Free Consultation Request*\n\n📋 *ID:* ${bookingId}\n👤 *Name:* ${name}\n📱 *Phone:* +${phone}\n📅 *Date:* ${date}\n⏰ *Time:* ${slot}\n📝 *Notes:* ${notes || 'None'}`;
+            await axios.post(
+                `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`,
+                { messaging_product: 'whatsapp', to: phone, type: 'text', text: { body: msg } },
+                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } }
+            ).catch(e => console.warn('WhatsApp notification failed:', e.message));
+        }
+
+        console.log(`✅ Free consultation booked: ${bookingId} for ${name} on ${date} at ${slot}`);
+        return res.status(200).json({ success: true, bookingId, message: 'Free consultation confirmed!' });
+
+    } catch (err) {
+        console.error('book-free error:', err.message);
+        return res.status(500).json({ success: false, message: 'Server error. Please try WhatsApp.' });
+    }
+});
+
+
 // -- 8. HEALTH CHECK ------------------------------------------------------
+
 app.get('/health', (req, res) => {
     res.status(200).json({
         status:    'ok',

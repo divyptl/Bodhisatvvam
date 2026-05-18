@@ -344,7 +344,7 @@ async function login() {
     const data = await res.json();
     if (res.ok && data.success) {
       sessionStorage.setItem('bdh_admin', 'true');
-      sessionStorage.setItem('bdh_pass', input);
+      sessionStorage.setItem('bdh_token', data.token);
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('dashboard').style.display = 'block';
       setTimeout(() => { document.getElementById('loginScreen').style.display = 'none'; }, 400);
@@ -362,7 +362,7 @@ async function login() {
 
 function logout() {
   sessionStorage.removeItem('bdh_admin');
-  sessionStorage.removeItem('bdh_pass');
+  sessionStorage.removeItem('bdh_token');
   location.reload();
 }
 
@@ -389,12 +389,12 @@ async function loadData() {
   document.getElementById('loadingOverlay').classList.add('active');
 
   try {
-    const pass = sessionStorage.getItem('bdh_pass') || '';
+    const token = sessionStorage.getItem('bdh_token') || '';
     
     // Fetch both datasets simultaneously
     const [ordersRes, bookingsRes] = await Promise.all([
-      fetch(`${API_BASE}/api/admin/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pass }) }),
-      fetch(`${API_BASE}/api/admin/bookings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pass }) })
+      fetch(`${API_BASE}/api/admin/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }),
+      fetch(`${API_BASE}/api/admin/bookings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
     ]);
 
     const oData = await ordersRes.json();
@@ -571,7 +571,7 @@ function formatDate(dateStr) {
 
 // ── UPDATE ORDER STATUS ───────────────────────────────────
 async function updateStatus(orderId, newStatus, selectEl) {
-  const pass = sessionStorage.getItem('bdh_pass') || '';
+  const token = sessionStorage.getItem('bdh_token') || '';
   const originalValue = selectEl.getAttribute('data-original') || newStatus;
   selectEl.setAttribute('data-original', newStatus);
   selectEl.disabled = true;
@@ -579,7 +579,7 @@ async function updateStatus(orderId, newStatus, selectEl) {
   try {
     const res  = await fetch(`${API_BASE}/api/admin/update-status`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pass, orderId, status: newStatus }),
+      body: JSON.stringify({ token, orderId, status: newStatus }),
     });
     const data = await res.json();
 

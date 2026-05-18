@@ -180,7 +180,7 @@ const API_BASE = '';
 let allProducts = [];
 let deleteTargetId = null;
 
-function getPass() { return sessionStorage.getItem('bdh_pass') || prompt('Enter admin password:') || ''; }
+function getToken() { return sessionStorage.getItem('bdh_token') || prompt('Enter admin token:') || ''; }
 
 async function loadProducts() {
   const grid = document.getElementById('productsGrid');
@@ -268,10 +268,10 @@ function renderImageGrid(p) {
 }
 
 async function saveProduct() {
-  const pass = getPass();
+  const token = getToken();
   const editId = document.getElementById('editId').value;
   const body = {
-    password: pass,
+    token: token,
     name: document.getElementById('fName').value,
     category: document.getElementById('fCategory').value,
     price: parseFloat(document.getElementById('fPrice').value),
@@ -304,9 +304,9 @@ function closeDeleteModal() { document.getElementById('deleteModal').classList.r
 
 async function confirmDelete() {
   if (!deleteTargetId) return;
-  const pass = getPass();
+  const token = getToken();
   try {
-    const res = await fetch(API_BASE + '/api/admin/products/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass, id:deleteTargetId}) });
+    const res = await fetch(API_BASE + '/api/admin/products/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token, id:deleteTargetId}) });
     const data = await res.json();
     if (data.success) { toast('✅ Product deleted'); closeDeleteModal(); loadProducts(); }
     else { toast('❌ ' + (data.message || 'Failed')); }
@@ -318,12 +318,12 @@ async function uploadImages() {
   if (!editId) { toast('❌ Save the product first, then upload images'); return; }
   const files = document.getElementById('imageInput').files;
   if (!files.length) { toast('❌ Select images first'); return; }
-  const pass = getPass();
+  const token = getToken();
   const fd = new FormData();
   for (let f of files) fd.append('images', f);
   try {
     const res = await fetch(`${API_BASE}/api/admin/products/${editId}/upload-image`, {
-      method:'POST', headers:{'x-admin-password': pass}, body: fd
+      method:'POST', headers:{'x-admin-token': token}, body: fd
     });
     const data = await res.json();
     if (data.success) {
@@ -337,10 +337,10 @@ async function uploadImages() {
 }
 
 async function deleteImage(productId, imgPath) {
-  const pass = getPass();
+  const token = getToken();
   try {
     const res = await fetch(`${API_BASE}/api/admin/products/${productId}/delete-image`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass, imagePath:imgPath})
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token, imagePath:imgPath})
     });
     const data = await res.json();
     if (data.success) {

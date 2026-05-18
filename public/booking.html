@@ -89,7 +89,7 @@
     padding: 0 40px; position: relative; z-index: 2;
   }
   .session-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
   }
   .session-card {
     background: white; border: 2px solid var(--cream-dark);
@@ -323,7 +323,7 @@
     nav { padding: 16px 24px; }
     .hero { padding: 40px 24px 60px; }
     .session-section { padding: 0 20px; }
-    .session-grid { grid-template-columns: 1fr; }
+    .session-grid { grid-template-columns: repeat(2, 1fr); }
     .booking-section { grid-template-columns: 1fr; padding: 0 20px; }
   }
 </style>
@@ -481,6 +481,7 @@ const MEDITATION_TIME_SLOTS = ['05:00 AM', '09:30 AM'];
 
 // Session types — Prices updated to 500, Group Meditation added
 const SESSIONS = [
+  { id: 'free_consultation', name: 'Free Consultation', icon: '🎁', desc: 'A complimentary 20-min intro call to understand your needs and find the right healing path.', price: 0, duration: '20 min' },
   { id: 'chakra', name: 'Chakra Healing & Balancing', icon: '✨', desc: 'Clear blockages and restore your energy centres.', price: 500, duration: '60 min' },
   { id: 'nlp', name: 'NLP Therapy', icon: '🧠', desc: 'Rewire your mindset with Neuro-Linguistic Programming.', price: 500, duration: '60 min' },
   { id: 'pranic', name: 'Pranic Healing', icon: '💫', desc: 'Advanced energy healing to restore your aura.', price: 500, duration: '60 min' },
@@ -531,7 +532,7 @@ function renderSessions() {
       <span class="session-icon">${s.icon}</span>
       <div class="session-name">${s.name}</div>
       <div class="session-desc">${s.desc}</div>
-      <div class="session-price">₹${s.price.toLocaleString('en-IN')}</div>
+      <div class="session-price">${s.price === 0 ? '<span style="color:var(--sage);font-size:1.1rem;font-weight:600;">FREE</span>' : '₹' + s.price.toLocaleString('en-IN')}</div>
       <div class="session-duration">${s.duration} · Video Call</div>
     </div>
   `).join('');
@@ -675,7 +676,15 @@ function updateSummary() {
   document.getElementById('sumTime').textContent =
     selectedSlot || '— Select a time —';
   document.getElementById('sumTotal').textContent =
-    selectedSession ? '₹' + selectedSession.price.toLocaleString('en-IN') : '—';
+    selectedSession ? (selectedSession.price === 0 ? 'FREE' : '₹' + selectedSession.price.toLocaleString('en-IN')) : '—';
+
+  // Update book button label based on whether session is free
+  const btn = document.getElementById('bookBtn');
+  if (selectedSession && selectedSession.price === 0) {
+    btn.textContent = '📅 Confirm Free Consultation';
+  } else {
+    btn.textContent = '💳 Pay & Confirm Booking';
+  }
 }
 
 // ── BOOK SESSION ──────────────────────────────────────────
@@ -706,6 +715,35 @@ async function bookSession() {
     price:       selectedSession.price,
     name, phone: digits, email, notes,
   };
+
+  // ── FREE SESSION: skip Razorpay, confirm directly ──
+  if (selectedSession.price === 0) {
+    btn.textContent = '⏳ Confirming…';
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`${API_BASE}/api/book-free`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingData),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        document.getElementById('successId').textContent = data.bookingId || '';
+        document.getElementById('successDetail').textContent =
+          `Your Free Consultation with Neepa is confirmed for ${formatDisplayDate(selectedDate)} at ${selectedSlot} IST. ` +
+          `She will reach out to you on WhatsApp to confirm the video call link. 🌸`;
+        document.getElementById('successOverlay').classList.add('open');
+      } else {
+        showError(data.message || 'Could not confirm booking. Please try WhatsApp.');
+      }
+    } catch (err) {
+      showError('Could not connect. Please WhatsApp us at +91 9737171090.');
+    } finally {
+      btn.textContent = '📅 Confirm Free Consultation';
+      btn.disabled = false;
+    }
+    return;
+  }
 
   try {
     // Step 1 — Create Razorpay order
