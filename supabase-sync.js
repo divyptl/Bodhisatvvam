@@ -21,6 +21,7 @@ const DATA_DIR = path.join(__dirname, 'public', 'data');
 const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
 const SITE_CONTENT_FILE = path.join(DATA_DIR, 'site-content.json');
+const CUSTOMERS_FILE = path.join(DATA_DIR, 'customers.json');
 
 // ── MAPPERS ──────────────────────────────────────────────
 
@@ -110,6 +111,15 @@ async function pullFromSupabase() {
         }
     } catch (e) { console.warn('   ⚠️ Site content sync failed:', e.message); }
 
+    try {
+        // Customers
+        const { data: customers, error: custErr } = await supabase.from('customers').select('*');
+        if (!custErr && customers) {
+            fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2), 'utf-8');
+            console.log(`   ✅ ${customers.length} customers synced`);
+        }
+    } catch (e) { console.warn('   ⚠️ Customers sync failed:', e.message); }
+
     console.log('🔄 Supabase sync complete.');
 }
 
@@ -174,6 +184,13 @@ async function syncAllSiteContent(content) {
         }));
         await supabase.from('site_content').upsert(rows, { onConflict: 'section' });
     } catch (e) { console.error('⚠️ Full site content sync failed:', e.message); }
+}
+
+async function syncCustomer(customer) {
+    if (!supabase) return;
+    try {
+        await supabase.from('customers').upsert(customer, { onConflict: 'phone' });
+    } catch (e) { console.error('⚠️ Customer sync failed:', e.message); }
 }
 
 // ── IMAGE STORAGE ────────────────────────────────────────
@@ -243,6 +260,7 @@ module.exports = {
     syncAllCategories,
     syncSiteContent,
     syncAllSiteContent,
+    syncCustomer,
     uploadImageToStorage,
     deleteImageFromStorage,
     saveOrder,

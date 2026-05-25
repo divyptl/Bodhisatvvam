@@ -96,6 +96,7 @@ const adminSessions = new Set();
 const PRODUCTS_FILE = path.join(__dirname, 'public', 'data', 'products.json');
 const CATEGORIES_FILE = path.join(__dirname, 'public', 'data', 'categories.json');
 const SITE_CONTENT_FILE = path.join(__dirname, 'public', 'data', 'site-content.json');
+const CUSTOMERS_FILE = path.join(__dirname, 'public', 'data', 'customers.json');
 const PRODUCT_IMAGES_DIR = path.join(__dirname, 'public', 'images', 'products');
 
 function readProducts() {
@@ -645,6 +646,56 @@ function writeSiteContent(content) {
     fs.writeFileSync(SITE_CONTENT_FILE, JSON.stringify(content, null, 2), 'utf-8');
 }
 
+function readCustomers() {
+    try {
+        if (!fs.existsSync(CUSTOMERS_FILE)) return [];
+        return JSON.parse(fs.readFileSync(CUSTOMERS_FILE, 'utf-8'));
+    } catch (e) { return []; }
+}
+
+function writeCustomers(customers) {
+    if (!fs.existsSync(path.dirname(CUSTOMERS_FILE))) fs.mkdirSync(path.dirname(CUSTOMERS_FILE), { recursive: true });
+    fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2), 'utf-8');
+}
+
+// ── Customer Auth Helpers (Crypto) ───────────
+const AUTH_SECRET = process.env.ADMIN_PASS || 'default-secret-change-me';
+
+function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+    const [salt, key] = storedHash.split(':');
+    if (!salt || !key) return false;
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return key === hash;
+}
+
+function generateCustomerToken(phone) {
+    const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+    const payload = `${phone}.${expires}`;
+    const sig = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('hex');
+    return `${payload}.${sig}`;
+}
+
+function verifyCustomerToken(req, res, next) {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'Missing token' });
+    const token = auth.split(' ')[1];
+    const [phone, expires, sig] = token.split('.');
+    if (!phone || !expires || !sig) return res.status(401).json({ success: false, message: 'Invalid token' });
+    if (Date.now() > parseInt(expires)) return res.status(401).json({ success: false, message: 'Token expired' });
+    
+    const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(`${phone}.${expires}`).digest('hex');
+    if (sig !== expectedSig) return res.status(401).json({ success: false, message: 'Signature mismatch' });
+    
+    req.customerPhone = phone;
+    next();
+}
+
 // Helper: generate next ID for a given category prefix (dynamic from categories.json)
 function generateProductId(category) {
     const products = readProducts();
@@ -1065,13 +1116,40 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ── ORDER HISTORY (public, by phone) ──
-app.get('/api/orders/history', async (req, res) => {
-    const { phone } = req.query;
-    if (!phone || !sbSync.supabase) {
-        return res.status(400).json({ success: false, message: 'Phone required and database must be configured.' });
+// ── CUSTOMER AUTHENTICATION (public) ──
+app.post('/api/customer/register', (req, res) => {
+    const { phone, name, password } = req.body;
+    if (!phone || !name || !password || password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Valid phone, name, and password (min 6 chars) required.' });
     }
-    const digits = phone.replace(/\D/g, '');
+    const cleanPhone = phone.replace(/\D/g, '');
+    let customers = readCustomers();
+    if (customers.find(c => c.phone === cleanPhone)) {
+        return res.status(400).json({ success: false, message: 'An account with this phone number already exists.' });
+    }
+    const newCustomer = { phone: cleanPhone, name: name.trim(), password_hash: hashPassword(password), created_at: new Date().toISOString() };
+    customers.push(newCustomer);
+    writeCustomers(customers);
+    sbSync.syncCustomer(newCustomer); // Save to Supabase
+    
+    res.status(201).json({ success: true, message: 'Account created successfully', token: generateCustomerToken(cleanPhone) });
+});
+
+app.post('/api/customer/login', (req, res) => {
+    const { phone, password } = req.body;
+    const cleanPhone = (phone || '').replace(/\D/g, '');
+    const customers = readCustomers();
+    const customer = customers.find(c => c.phone === cleanPhone);
+    if (!customer || !verifyPassword(password, customer.password_hash)) {
+        return res.status(401).json({ success: false, message: 'Invalid phone number or password.' });
+    }
+    res.status(200).json({ success: true, message: 'Login successful', token: generateCustomerToken(cleanPhone), name: customer.name });
+});
+
+// ── ORDER HISTORY (protected by customer token) ──
+app.get('/api/orders/history', verifyCustomerToken, async (req, res) => {
+    const digits = req.customerPhone; // Verified from JWT token
+    if (!sbSync.supabase) return res.status(503).json({ success: false, message: 'Database not configured.' });
     try {
         const { data: orders } = await sbSync.supabase.from('orders').select('*').eq('phone', digits).order('created_at', { ascending: false });
         const { data: bookings } = await sbSync.supabase.from('bookings').select('*').eq('phone', digits).order('created_at', { ascending: false });
