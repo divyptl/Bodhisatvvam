@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bodhisatvvam — Website Content Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1c3a28;--forest-light:#2d5a3d;--sage:#7a9e7e;--cream:#f5efe3;--cream-dark:#ede4d2;--amber:#c47c3a;--gold:#d4aa60;--text-dark:#1a2820;--text-mid:#3d5047;--text-light:#7a9080;--danger:#b85c38;--success:#2d6a4f}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh}
+.top-nav{background:var(--forest);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.top-nav-logo{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--cream);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.top-nav-logo span{color:var(--gold);font-style:italic}
+.nav-links{display:flex;gap:12px;align-items:center}
+.nav-links a{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);text-decoration:none;padding:8px 16px;border:1px solid rgba(212,170,96,.3);transition:all .2s}
+.nav-links a:hover{background:rgba(212,170,96,.1);color:var(--gold)}
+.page-header{padding:32px 40px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--forest)}
+.btn{padding:10px 20px;border:none;font-family:'Jost',sans-serif;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--forest);color:var(--cream)}.btn-primary:hover{background:var(--forest-light)}
+.btn-amber{background:var(--amber);color:white}.btn-amber:hover{background:#d4894a}
+.btn-outline{background:transparent;border:1px solid var(--cream-dark);color:var(--text-mid)}.btn-outline:hover{border-color:var(--forest);color:var(--forest)}
+.btn-danger{background:var(--danger);color:white}
+.btn-sm{padding:6px 14px;font-size:.7rem}
+.tabs{display:flex;gap:8px;padding:20px 40px;border-bottom:1px solid var(--cream-dark);flex-wrap:wrap}
+.tab{background:transparent;border:none;padding:10px 20px;cursor:pointer;font-family:'Jost',sans-serif;font-size:.82rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);font-weight:500;border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:var(--forest);border-bottom-color:var(--forest)}
+.tab:hover:not(.active){color:var(--text-mid)}
+.section{padding:24px 40px 40px;display:none}
+.section.active{display:block}
+.card{background:white;border:1px solid var(--cream-dark);padding:28px;margin-bottom:16px}
+.card-title{font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--forest);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--cream-dark)}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-mid);margin-bottom:6px;font-weight:500}
+.fg input,.fg textarea{width:100%;padding:10px 14px;border:1px solid var(--cream-dark);background:white;font-family:'Jost',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s}
+.fg input:focus,.fg textarea:focus{border-color:var(--forest)}
+.fg textarea{resize:vertical;min-height:80px}
+.fg .help{font-size:.7rem;color:var(--text-light);margin-top:4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.testimonial-card{background:var(--cream);border:1px solid var(--cream-dark);padding:16px;margin-bottom:12px;position:relative}
+.testimonial-card .remove-btn{position:absolute;top:8px;right:8px;background:var(--danger);color:white;border:none;width:24px;height:24px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center}
+.pillar-card{background:var(--cream);border:1px solid var(--cream-dark);padding:16px;margin-bottom:12px}
+.marquee-item-card{background:var(--cream);padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;border:1px solid var(--cream-dark)}
+.marquee-item-card input{flex:1;border:none;background:transparent;font-family:'Jost',sans-serif;font-size:.85rem;outline:none}
+.marquee-item-card button{background:var(--danger);color:white;border:none;width:24px;height:24px;cursor:pointer;font-size:.7rem}
+.save-bar{position:sticky;bottom:0;background:var(--forest);padding:16px 40px;display:flex;justify-content:space-between;align-items:center;z-index:50}
+.save-bar-text{color:var(--sage);font-size:.82rem}
+.toast-wrap{position:fixed;bottom:80px;right:32px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-msg{background:var(--forest);color:var(--cream);padding:12px 20px;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.2);transform:translateX(120%);transition:transform .3s ease}
+.toast-msg.show{transform:translateX(0)}
+@media(max-width:680px){.tabs,.section,.page-header{padding-left:16px;padding-right:16px}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="top-nav">
+  <a href="/admin.html" class="top-nav-logo">Bodhi<span>satvvam</span></a>
+  <div class="nav-links">
+    <a href="/admin.html">← Dashboard</a>
+    <a href="/admin-products.html">📦 Products</a>
+    <a href="/admin-categories.html">📂 Categories</a>
+    <a href="/" target="_blank">View Store</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1 class="page-title">🌐 Website Content Manager</h1>
+  <button class="btn btn-outline" onclick="loadContent()">↻ Reload</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('hero',this)">🏠 Hero</button>
+  <button class="tab" onclick="switchTab('about',this)">📖 About</button>
+  <button class="tab" onclick="switchTab('products',this)">🛒 Products Section</button>
+  <button class="tab" onclick="switchTab('consultation',this)">💬 Consultation</button>
+  <button class="tab" onclick="switchTab('featured',this)">⭐ Featured Banner</button>
+  <button class="tab" onclick="switchTab('testimonials',this)">💬 Testimonials</button>
+  <button class="tab" onclick="switchTab('footer',this)">📋 Footer</button>
+  <button class="tab" onclick="switchTab('marquee',this)">📢 Marquee</button>
+</div>
+
+<!-- HERO -->
+<div class="section active" id="sec-hero">
+  <div class="card">
+    <div class="card-title">Hero Section</div>
+    <div class="fg"><label>Tag Line</label><input id="hero-tag"></div>
+    <div class="fg"><label>Main Title (HTML allowed)</label><textarea id="hero-title" rows="2"></textarea><div class="help">Use &lt;em&gt; for italic accent color, &lt;br&gt; for line breaks</div></div>
+    <div class="fg"><label>Subtitle</label><textarea id="hero-subtitle" rows="3"></textarea></div>
+    <div class="row">
+      <div class="fg"><label>Primary Button Text</label><input id="hero-ctaPrimary"></div>
+      <div class="fg"><label>Secondary Button Text</label><input id="hero-ctaSecondary"></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>Badge Number</label><input id="hero-badgeNumber"></div>
+      <div class="fg"><label>Badge Text</label><input id="hero-badgeText"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<div class="section" id="sec-about">
+  <div class="card">
+    <div class="card-title">About Section</div>
+    <div class="fg"><label>Section Tag</label><input id="about-tag"></div>
+    <div class="fg"><label>Title (HTML)</label><textarea id="about-title" rows="2"></textarea></div>
+    <div class="fg"><label>Description</label><textarea id="about-description" rows="4"></textarea></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Pillars (4 feature boxes)</div>
+    <div id="pillarsContainer"></div>
+  </div>
+</div>
+
+<!-- PRODUCTS SECTION -->
+<div class="section" id="sec-products">
+  <div class="card">
+    <div class="card-title">Products Section Header</div>
+    <div class="fg"><label>Section Tag</label><input id="products-tag"></div>
+    <div class="fg"><label>Title (HTML)</label><input id="products-title"></div>
+  </div>
+</div>
+
+<!-- CONSULTATION -->
+<div class="section" id="sec-consultation">
+  <div class="card">
+    <div class="card-title">Free Consultation Banner</div>
+    <div class="fg"><label>Title</label><input id="consultation-title"></div>
+    <div class="fg"><label>Description (HTML)</label><textarea id="consultation-description" rows="3"></textarea></div>
+    <div class="fg"><label>Button Text</label><input id="consultation-buttonText"></div>
+  </div>
+</div>
+
+<!-- FEATURED -->
+<div class="section" id="sec-featured">
+  <div class="card">
+    <div class="card-title">Featured Product Banner</div>
+    <div class="fg"><label>Label</label><input id="featured-label"></div>
+    <div class="fg"><label>Title (HTML)</label><textarea id="featured-title" rows="2"></textarea></div>
+    <div class="fg"><label>Description</label><textarea id="featured-description" rows="3"></textarea></div>
+    <div class="row">
+      <div class="fg"><label>Price (₹)</label><input type="number" id="featured-price"></div>
+      <div class="fg"><label>Product ID</label><input type="number" id="featured-productId"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TESTIMONIALS -->
+<div class="section" id="sec-testimonials">
+  <div class="card">
+    <div class="card-title">Testimonials Section</div>
+    <div class="fg"><label>Section Tag</label><input id="testimonials-tag"></div>
+    <div class="fg"><label>Title (HTML)</label><input id="testimonials-title"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Testimonial Cards</span>
+      <button class="btn btn-amber btn-sm" onclick="addTestimonial()">+ Add</button>
+    </div>
+    <div id="testimonialsContainer"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="section" id="sec-footer">
+  <div class="card">
+    <div class="card-title">Footer Information</div>
+    <div class="row">
+      <div class="fg"><label>Brand Name</label><input id="footer-brand"></div>
+      <div class="fg"><label>Copyright</label><input id="footer-copyright"></div>
+    </div>
+    <div class="fg"><label>Tagline</label><textarea id="footer-tagline" rows="2"></textarea></div>
+    <div class="fg"><label>WhatsApp Number</label><input id="footer-whatsapp"></div>
+    <div class="fg"><label>Email</label><input id="footer-email"></div>
+    <div class="fg"><label>Website</label><input id="footer-website"></div>
+    <div class="fg"><label>Address (one line per field, comma-separated)</label><input id="footer-address" placeholder="Line 1, Line 2, Line 3"></div>
+  </div>
+</div>
+
+<!-- MARQUEE -->
+<div class="section" id="sec-marquee">
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Marquee Strip Items</span>
+      <button class="btn btn-amber btn-sm" onclick="addMarqueeItem()">+ Add Item</button>
+    </div>
+    <div class="help" style="margin-bottom:12px">These scroll across the strip between the hero and about sections.</div>
+    <div id="marqueeContainer"></div>
+  </div>
+</div>
+
+<div class="save-bar">
+  <span class="save-bar-text">Changes are saved per-section when you click Save.</span>
+  <button class="btn btn-amber" onclick="saveCurrentSection()" id="saveBtn">💾 Save Current Section</button>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const API_BASE = '';
+let siteContent = {};
+let currentSection = 'hero';
+
+function getToken() { return sessionStorage.getItem('bdh_token') || prompt('Enter admin token:') || ''; }
+
+async function loadContent() {
+  try {
+    const res = await fetch(`${API_BASE}/api/site-content`);
+    const data = await res.json();
+    siteContent = data.success ? data.content : {};
+    populateAll();
+    toast('✅ Content loaded');
+  } catch(e) { toast('❌ Could not load content'); }
+}
+
+function switchTab(tab, btn) {
+  currentSection = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('sec-' + tab).classList.add('active');
+}
+
+function populateAll() {
+  const h = siteContent.hero || {};
+  setVal('hero-tag', h.tag); setVal('hero-title', h.title); setVal('hero-subtitle', h.subtitle);
+  setVal('hero-ctaPrimary', h.ctaPrimary); setVal('hero-ctaSecondary', h.ctaSecondary);
+  setVal('hero-badgeNumber', h.badgeNumber); setVal('hero-badgeText', h.badgeText);
+
+  const a = siteContent.about || {};
+  setVal('about-tag', a.tag); setVal('about-title', a.title); setVal('about-description', a.description);
+  renderPillars(a.pillars || []);
+
+  const p = siteContent.products || {};
+  setVal('products-tag', p.tag); setVal('products-title', p.title);
+
+  const c = siteContent.consultation || {};
+  setVal('consultation-title', c.title); setVal('consultation-description', c.description); setVal('consultation-buttonText', c.buttonText);
+
+  const f = siteContent.featured || {};
+  setVal('featured-label', f.label); setVal('featured-title', f.title); setVal('featured-description', f.description);
+  setVal('featured-price', f.price); setVal('featured-productId', f.productId);
+
+  const t = siteContent.testimonials || {};
+  setVal('testimonials-tag', t.tag); setVal('testimonials-title', t.title);
+  renderTestimonials(t.items || []);
+
+  const ft = siteContent.footer || {};
+  setVal('footer-brand', ft.brand); setVal('footer-copyright', ft.copyright);
+  setVal('footer-tagline', ft.tagline); setVal('footer-whatsapp', ft.whatsapp);
+  setVal('footer-email', ft.email); setVal('footer-website', ft.website);
+  setVal('footer-address', (ft.address || []).join(', '));
+
+  renderMarquee(siteContent.marquee || []);
+}
+
+function setVal(id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; }
+function getVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+
+function renderPillars(pillars) {
+  const c = document.getElementById('pillarsContainer');
+  c.innerHTML = pillars.map((p, i) => `<div class="pillar-card">
+    <div class="row">
+      <div class="fg"><label>Icon</label><input id="pillar-icon-${i}" value="${p.icon || ''}"></div>
+      <div class="fg"><label>Name</label><input id="pillar-name-${i}" value="${p.name || ''}"></div>
+    </div>
+    <div class="fg"><label>Description</label><input id="pillar-desc-${i}" value="${p.desc || ''}"></div>
+  </div>`).join('');
+}
+
+function renderTestimonials(items) {
+  const c = document.getElementById('testimonialsContainer');
+  c.innerHTML = items.map((t, i) => `<div class="testimonial-card">
+    <button class="remove-btn" onclick="removeTestimonial(${i})">✕</button>
+    <div class="row">
+      <div class="fg"><label>Name</label><input id="test-name-${i}" value="${t.name || ''}"></div>
+      <div class="fg"><label>Location</label><input id="test-loc-${i}" value="${t.location || ''}"></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>Avatar Letter</label><input id="test-avatar-${i}" value="${t.avatar || ''}" maxlength="2"></div>
+      <div class="fg"><label>Stars (1-5)</label><input type="number" id="test-stars-${i}" value="${t.stars || 5}" min="1" max="5"></div>
+    </div>
+    <div class="fg"><label>Text</label><textarea id="test-text-${i}" rows="2">${t.text || ''}</textarea></div>
+  </div>`).join('');
+}
+
+function addTestimonial() {
+  const items = collectTestimonials();
+  items.push({ name: '', location: '', avatar: '', stars: 5, text: '' });
+  renderTestimonials(items);
+}
+
+function removeTestimonial(idx) {
+  const items = collectTestimonials();
+  items.splice(idx, 1);
+  renderTestimonials(items);
+}
+
+function collectTestimonials() {
+  const items = [];
+  let i = 0;
+  while (document.getElementById('test-name-' + i)) {
+    items.push({
+      name: getVal('test-name-' + i), location: getVal('test-loc-' + i),
+      avatar: getVal('test-avatar-' + i), stars: parseInt(getVal('test-stars-' + i)) || 5,
+      text: getVal('test-text-' + i)
+    });
+    i++;
+  }
+  return items;
+}
+
+function renderMarquee(items) {
+  const c = document.getElementById('marqueeContainer');
+  c.innerHTML = items.map((item, i) => `<div class="marquee-item-card">
+    <input id="marquee-${i}" value="${item}">
+    <button onclick="removeMarqueeItem(${i})">✕</button>
+  </div>`).join('');
+}
+
+function addMarqueeItem() {
+  const items = collectMarquee();
+  items.push('✨ New Item');
+  renderMarquee(items);
+}
+
+function removeMarqueeItem(idx) {
+  const items = collectMarquee();
+  items.splice(idx, 1);
+  renderMarquee(items);
+}
+
+function collectMarquee() {
+  const items = [];
+  let i = 0;
+  while (document.getElementById('marquee-' + i)) { items.push(getVal('marquee-' + i)); i++; }
+  return items;
+}
+
+function collectPillars() {
+  const items = [];
+  let i = 0;
+  while (document.getElementById('pillar-icon-' + i)) {
+    items.push({ icon: getVal('pillar-icon-' + i), name: getVal('pillar-name-' + i), desc: getVal('pillar-desc-' + i) });
+    i++;
+  }
+  return items;
+}
+
+async function saveCurrentSection() {
+  const token = getToken();
+  let section = currentSection;
+  let data;
+
+  switch (section) {
+    case 'hero':
+      data = { tag: getVal('hero-tag'), title: getVal('hero-title'), subtitle: getVal('hero-subtitle'),
+        ctaPrimary: getVal('hero-ctaPrimary'), ctaSecondary: getVal('hero-ctaSecondary'),
+        badgeNumber: getVal('hero-badgeNumber'), badgeText: getVal('hero-badgeText') };
+      break;
+    case 'about':
+      data = { tag: getVal('about-tag'), title: getVal('about-title'), description: getVal('about-description'), pillars: collectPillars() };
+      break;
+    case 'products':
+      data = { tag: getVal('products-tag'), title: getVal('products-title') };
+      break;
+    case 'consultation':
+      data = { title: getVal('consultation-title'), description: getVal('consultation-description'), buttonText: getVal('consultation-buttonText') };
+      break;
+    case 'featured':
+      data = { label: getVal('featured-label'), title: getVal('featured-title'), description: getVal('featured-description'),
+        price: parseInt(getVal('featured-price')) || 1799, productId: parseInt(getVal('featured-productId')) || 1000 };
+      break;
+    case 'testimonials':
+      data = { tag: getVal('testimonials-tag'), title: getVal('testimonials-title'), items: collectTestimonials() };
+      break;
+    case 'footer':
+      data = { brand: getVal('footer-brand'), copyright: getVal('footer-copyright'), tagline: getVal('footer-tagline'),
+        whatsapp: getVal('footer-whatsapp'), email: getVal('footer-email'), website: getVal('footer-website'),
+        address: getVal('footer-address').split(',').map(s => s.trim()).filter(Boolean) };
+      break;
+    case 'marquee':
+      section = 'marquee';
+      data = collectMarquee();
+      break;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/site-content/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ section, data })
+    });
+    const result = await res.json();
+    if (result.success) { toast('✅ Section saved!'); siteContent[section] = data; }
+    else { toast('❌ ' + (result.message || 'Save failed')); }
+  } catch(e) { toast('❌ Connection error'); }
+}
+
+function toast(msg) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast-msg'; el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 3000);
+}
+
+loadContent();
+</script>
+</body>
+</html>

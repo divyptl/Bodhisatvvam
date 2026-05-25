@@ -92,7 +92,9 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark
 <nav class="top-nav">
   <a href="/admin.html" class="top-nav-logo">Bodhi<span>satvvam</span></a>
   <div class="nav-links">
-    <a href="/admin.html">← Orders & Bookings</a>
+    <a href="/admin.html">← Dashboard</a>
+    <a href="/admin-categories.html">📂 Categories</a>
+    <a href="/admin-content.html">🌐 Content</a>
     <a href="/" target="_blank">View Store</a>
   </div>
 </nav>
@@ -109,9 +111,6 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark
   <input type="text" id="searchProd" placeholder="🔍 Search products..." oninput="filterRender()">
   <select id="catFilter" onchange="filterRender()">
     <option value="">All Categories</option>
-    <option value="salts">Energy Salts</option>
-    <option value="candles">Candles</option>
-    <option value="healing">Healing Sessions</option>
   </select>
   <span class="product-count" id="prodCount"></span>
 </div>
@@ -130,7 +129,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark
       <div class="form-row">
         <div class="form-group"><label>Product Name *</label><input id="fName" placeholder="e.g. Protection Salt"></div>
         <div class="form-group"><label>Category *</label>
-          <select id="fCategory"><option value="salts">Energy Salts</option><option value="candles">Candles</option><option value="healing">Healing Sessions</option></select>
+          <select id="fCategory"></select>
         </div>
       </div>
       <div class="form-row">
@@ -178,9 +177,24 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark
 <script>
 const API_BASE = '';
 let allProducts = [];
+let allCategories = [];
 let deleteTargetId = null;
 
 function getToken() { return sessionStorage.getItem('bdh_token') || prompt('Enter admin token:') || ''; }
+
+async function loadCategories() {
+  try {
+    const res = await fetch(`${API_BASE}/api/categories`);
+    const data = await res.json();
+    allCategories = data.success ? data.categories : [];
+    // Populate filter dropdown
+    const filter = document.getElementById('catFilter');
+    filter.innerHTML = '<option value="">All Categories</option>' + allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    // Populate form dropdown
+    const formCat = document.getElementById('fCategory');
+    formCat.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  } catch(e) { console.error('Could not load categories'); }
+}
 
 async function loadProducts() {
   const grid = document.getElementById('productsGrid');
@@ -363,7 +377,7 @@ function toast(msg) {
 }
 
 // Init
-loadProducts();
+loadCategories().then(() => loadProducts());
 </script>
 </body>
 </html>

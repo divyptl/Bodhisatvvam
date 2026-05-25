@@ -1,0 +1,103 @@
+{
+  "hero": {
+    "tag": "Unlock Your Inner Healing & Empower Your life",
+    "title": "Energy-infused<br><em>remedies,</em><br>for your soul.",
+    "subtitle": "Guided by Neepa Patel — Life Coach, Pranic Healer, and NLP Trainer. We offer handcrafted energy candles, mystical salts, and one-on-one sessions to revitalize your mental strength and energy levels.",
+    "ctaPrimary": "Explore Collection",
+    "ctaSecondary": "Meet Neepa →",
+    "badgeNumber": "100%",
+    "badgeText": "Intention Crafted"
+  },
+  "about": {
+    "tag": "Our Philosophy",
+    "title": "We believe in energy's<br>ability to <em>heal.</em>",
+    "description": "At Bodhisatvvam, we focus on revitalizing your mental strength, emotional well-being, and physical health. Whether through one-on-one NLP therapy or our handcrafted energy-infused products, our goal is to help you overcome fear, anxiety, and negativity.",
+    "pillars": [
+      { "icon": "✨", "name": "Pranic Healing", "desc": "Advanced energy techniques to clear blockages and restore your aura." },
+      { "icon": "🧠", "name": "NLP Therapy", "desc": "Neuro Linguistic Programming to rewire your mindset for success." },
+      { "icon": "🕯️", "name": "Infused Candles", "desc": "Charged with specific intentions to manifest your desires." },
+      { "icon": "🧂", "name": "Mystic Salts", "desc": "Specially formulated salts to protect, cleanse, and attract abundance." }
+    ]
+  },
+  "products": {
+    "tag": "Our Offerings",
+    "title": "Shop our <em>collection</em>"
+  },
+  "consultation": {
+    "title": "Unsure Where to Start?",
+    "description": "Every healing journey is unique. Connect with Neepa for a <strong>Free Consultation</strong> to find the right path and remedies tailored specifically for your energy needs.",
+    "buttonText": "Book Free Consultation"
+  },
+  "featured": {
+    "label": "Custom Made for You",
+    "title": "Manifest Your<br><em>Desires</em>",
+    "description": "Can't find exactly what you need? We create Custom Made Energy Candles specifically attuned to your personal intentions and challenges.",
+    "price": 1799,
+    "productId": 1000
+  },
+  "testimonials": {
+    "tag": "What Our Clients Say",
+    "title": "Transformative <em>experiences</em>",
+    "items": [
+      {
+        "stars": 5,
+        "text": "After just one session with Neepa, I felt a shift in my energy that I hadn't experienced in years. The chakra healing brought me clarity and peace I didn't know was possible.",
+        "name": "Ananya S.",
+        "location": "Mumbai, Maharashtra",
+        "avatar": "A"
+      },
+      {
+        "stars": 5,
+        "text": "The Protection Salt has been incredible for my home. The energy of our entire house shifted within days. My family noticed it too — calmer, more harmonious.",
+        "name": "Rajesh M.",
+        "location": "Surat, Gujarat",
+        "avatar": "R"
+      },
+      {
+        "stars": 5,
+        "text": "I was skeptical at first, but the NLP therapy session changed my perspective entirely. I've overcome anxiety that held me back for years. Truly grateful.",
+        "name": "Priya K.",
+        "location": "Ahmedabad, Gujarat",
+        "avatar": "P"
+      },
+      {
+        "stars": 5,
+        "text": "The custom-made candle Neepa created for my business intention started showing results within the first week. My client inquiries doubled!",
+        "name": "Deepak T.",
+        "location": "Pune, Maharashtra",
+        "avatar": "D"
+      },
+      {
+        "stars": 5,
+        "text": "The Garbh Sanskar therapy was a beautiful experience. Neepa's gentle guidance during my pregnancy brought so much positivity. My baby is healthy and happy!",
+        "name": "Sneha J.",
+        "location": "Vadodara, Gujarat",
+        "avatar": "S"
+      },
+      {
+        "stars": 5,
+        "text": "I've been using the Money Attract Salt for 3 months now. The financial blocks I was facing have slowly but surely dissolved. Highly recommend Bodhisatvvam.",
+        "name": "Vikram P.",
+        "location": "Delhi, NCR",
+        "avatar": "V"
+      }
+    ]
+  },
+  "footer": {
+    "brand": "Bodhisatvvam",
+    "tagline": "Unlock Your Inner Healing & Empower Your life. Guided by Neepa Patel, Life Coach & Pranic Healer.",
+    "address": ["Office: 10, Ashine,", "Svnit Campus, Icchanath,", "Surat, Gujarat, India"],
+    "whatsapp": "+91 9737171090",
+    "email": "shreebodhisatvvam@gmail.com",
+    "website": "www.shreebodhisatvvam.com",
+    "copyright": "© 2026 Bodhisatvvam. All rights reserved."
+  },
+  "marquee": [
+    "✨ Chakra Healing & Balancing",
+    "🕯️ Energy-Infused Candles",
+    "🧂 Protection Salts",
+    "💫 Aura Cleaning & Energize",
+    "💖 Love Attraction Harmony",
+    "🌿 Pranic Healing"
+  ]
+}

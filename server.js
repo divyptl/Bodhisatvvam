@@ -16,6 +16,7 @@ const crypto    = require('crypto'); // Built-in Node.js -- no install needed
 const rateLimit = require('express-rate-limit');
 const Razorpay  = require('razorpay');
 const multer    = require('multer');
+const sbSync    = require('./supabase-sync');
 
 const app = express();
 
@@ -69,7 +70,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type'],
     credentials: false,
 }));
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // -- 4. RATE LIMITERS -----------------------------------------------------
@@ -93,6 +94,8 @@ const adminSessions = new Set();
 
 // -- 5. HELPERS -----------------------------------------------------------
 const PRODUCTS_FILE = path.join(__dirname, 'public', 'data', 'products.json');
+const CATEGORIES_FILE = path.join(__dirname, 'public', 'data', 'categories.json');
+const SITE_CONTENT_FILE = path.join(__dirname, 'public', 'data', 'site-content.json');
 const PRODUCT_IMAGES_DIR = path.join(__dirname, 'public', 'images', 'products');
 
 function readProducts() {
@@ -341,7 +344,15 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
     // 7c. Send WhatsApp confirmation
     await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address, customerNotes);
 
-    // 7d. Return success to frontend
+    // 7d. Save order to Supabase (non-blocking)
+    sbSync.saveOrder({
+        order_id: bodhiOrderId, name, phone: sanitizedPhone,
+        address, items, total: parseFloat(String(total).replace(/[^0-9.]/g, '')),
+        status: 'Paid', payment_id: razorpay_payment_id,
+        customer_notes: customerNotes || ''
+    });
+
+    // 7e. Return success to frontend
     return res.status(200).json({
         success: true,
         orderId: bodhiOrderId,
@@ -477,6 +488,14 @@ app.post('/api/verify-booking', orderLimiter, async (req, res) => {
         } catch (err) { console.error(`Neepa WA error: ${err.message}`); }
     }
 
+    // Save booking to Supabase (non-blocking)
+    sbSync.saveBooking({
+        booking_id: bookingId, name, phone: sanitizedPhone,
+        email: email || '', session_name: sessionName,
+        date, time_slot: slot, price, payment_id: razorpay_payment_id,
+        notes: notes || ''
+    });
+
     return res.status(200).json({ success: true, bookingId, message: 'Booking confirmed!' });
 });
 
@@ -593,11 +612,45 @@ app.post('/api/admin/update-status', requireAdmin, async (req, res) => {
 if (!fs.existsSync(path.dirname(PRODUCTS_FILE))) fs.mkdirSync(path.dirname(PRODUCTS_FILE), { recursive: true });
 if (!fs.existsSync(PRODUCT_IMAGES_DIR)) fs.mkdirSync(PRODUCT_IMAGES_DIR, { recursive: true });
 
-// Helper: generate next ID for a given category prefix
+// ── Category & Site Content helpers ────────────────────────
+function readCategories() {
+    try {
+        if (!fs.existsSync(CATEGORIES_FILE)) return [];
+        const raw = fs.readFileSync(CATEGORIES_FILE, 'utf-8');
+        return JSON.parse(raw);
+    } catch (err) {
+        console.error('Could not read categories.json:', err.message);
+        return [];
+    }
+}
+
+function writeCategories(cats) {
+    if (!fs.existsSync(path.dirname(CATEGORIES_FILE))) fs.mkdirSync(path.dirname(CATEGORIES_FILE), { recursive: true });
+    fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(cats, null, 2), 'utf-8');
+}
+
+function readSiteContent() {
+    try {
+        if (!fs.existsSync(SITE_CONTENT_FILE)) return {};
+        const raw = fs.readFileSync(SITE_CONTENT_FILE, 'utf-8');
+        return JSON.parse(raw);
+    } catch (err) {
+        console.error('Could not read site-content.json:', err.message);
+        return {};
+    }
+}
+
+function writeSiteContent(content) {
+    if (!fs.existsSync(path.dirname(SITE_CONTENT_FILE))) fs.mkdirSync(path.dirname(SITE_CONTENT_FILE), { recursive: true });
+    fs.writeFileSync(SITE_CONTENT_FILE, JSON.stringify(content, null, 2), 'utf-8');
+}
+
+// Helper: generate next ID for a given category prefix (dynamic from categories.json)
 function generateProductId(category) {
     const products = readProducts();
-    const prefixes = { salts: 100, healing: 200, candles: 300 };
-    const base = prefixes[category] || 400;
+    const categories = readCategories();
+    const cat = categories.find(c => c.id === category);
+    const base = cat ? cat.idPrefix : 400;
     const categoryProducts = products.filter(p => p.id >= base && p.id < base + 100 && p.id !== 1000);
     if (categoryProducts.length === 0) return base + 1;
     const maxId = Math.max(...categoryProducts.map(p => p.id));
@@ -662,6 +715,7 @@ app.post('/api/admin/products/add', requireAdmin, (req, res) => {
 
     products.push(newProduct);
     writeProducts(products);
+    sbSync.syncProduct(newProduct); // Background sync to Supabase
 
     // Create image directory
     const imgDir = path.join(PRODUCT_IMAGES_DIR, String(newProduct.id));
@@ -690,6 +744,7 @@ app.post('/api/admin/products/edit', requireAdmin, (req, res) => {
     if (badge !== undefined)    products[idx].badge    = badge;
 
     writeProducts(products);
+    sbSync.syncProduct(products[idx]); // Background sync
     console.log(`✅ Product updated: ${products[idx].name} (ID: ${id})`);
     res.status(200).json({ success: true, product: products[idx] });
 });
@@ -705,6 +760,7 @@ app.post('/api/admin/products/delete', requireAdmin, (req, res) => {
 
     products = products.filter(p => p.id !== parseInt(id));
     writeProducts(products);
+    sbSync.syncProduct(parseInt(id), 'delete'); // Background sync
 
     console.log(`🗑️ Product deleted: ${product.name} (ID: ${id})`);
     res.status(200).json({ success: true, message: `"${product.name}" has been deleted.` });
@@ -714,15 +770,27 @@ app.post('/api/admin/products/delete', requireAdmin, (req, res) => {
 app.post('/api/admin/products/:id/upload-image',
     requireAdmin,
     uploadProductImage.array('images', 5),
-    (req, res) => {
+    async (req, res) => {
         const productId = parseInt(req.params.id);
         const products = readProducts();
         const product = products.find(p => p.id === productId);
         if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
 
-        const uploadedPaths = req.files.map(f => `/images/products/${productId}/${f.filename}`);
+        // Upload to Supabase Storage if configured, otherwise use local paths
+        let uploadedPaths = [];
+        if (sbSync.isConfigured) {
+            for (const f of req.files) {
+                const url = await sbSync.uploadImageToStorage(productId, f.buffer || fs.readFileSync(f.path), f.originalname);
+                if (url) uploadedPaths.push(url);
+            }
+        }
+        // Fallback to local paths if Supabase not configured or upload failed
+        if (uploadedPaths.length === 0) {
+            uploadedPaths = req.files.map(f => `/images/products/${productId}/${f.filename}`);
+        }
         product.images = [...(product.images || []), ...uploadedPaths];
         writeProducts(products);
+        sbSync.syncProduct(product); // Sync updated images
 
         console.log(`📸 ${uploadedPaths.length} image(s) uploaded for product ${productId}`);
         res.status(200).json({ success: true, images: product.images });
@@ -749,11 +817,15 @@ app.post('/api/admin/products/:id/delete-image', requireAdmin, (req, res) => {
     // Remove from product images array
     product.images = (product.images || []).filter(img => img !== imagePath);
     writeProducts(products);
+    sbSync.syncProduct(product); // Sync updated images
 
-    if (fs.existsSync(fullPath)) {
+    // Delete from Supabase Storage if it's a Supabase URL
+    if (imagePath.includes('supabase.co')) {
+        sbSync.deleteImageFromStorage(imagePath);
+    } else if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
-        console.log(`🗑️ Image deleted: ${imagePath}`);
     }
+    console.log(`🗑️ Image deleted: ${imagePath}`);
 
     res.status(200).json({ success: true, images: product.images });
 });
@@ -775,6 +847,7 @@ app.post('/api/admin/products/bulk-update-price', requireAdmin, (req, res) => {
         }
     });
     writeProducts(products);
+    sbSync.syncBulkProducts(products); // Sync all updated products
 
     console.log(`✅ Bulk price update: ${updatedCount} products updated`);
     res.status(200).json({ success: true, message: `${updatedCount} product(s) updated.` });
@@ -815,6 +888,14 @@ app.post('/api/book-free', orderLimiter, async (req, res) => {
             ).catch(e => console.warn('WhatsApp notification failed:', e.message));
         }
 
+        // Save to Supabase
+        sbSync.saveBooking({
+            booking_id: bookingId, name, phone,
+            email: '', session_name: sessionName || 'Free Consultation',
+            date, time_slot: slot, price: 0, payment_id: '',
+            notes: notes || ''
+        });
+
         console.log(`✅ Free consultation booked: ${bookingId} for ${name} on ${date} at ${slot}`);
         return res.status(200).json({ success: true, bookingId, message: 'Free consultation confirmed!' });
 
@@ -822,6 +903,148 @@ app.post('/api/book-free', orderLimiter, async (req, res) => {
         console.error('book-free error:', err.message);
         return res.status(500).json({ success: false, message: 'Server error. Please try WhatsApp.' });
     }
+});
+
+
+// ═══════════════════════════════════════════════════════════
+//  CATEGORY MANAGEMENT SYSTEM
+// ═══════════════════════════════════════════════════════════
+
+// ── GET: Fetch all categories (public) ──
+app.get('/api/categories', (req, res) => {
+    const categories = readCategories();
+    res.status(200).json({ success: true, categories });
+});
+
+// ── POST: Add a new category (admin only) ──
+app.post('/api/admin/categories/add', requireAdmin, (req, res) => {
+    const { id, name, emoji, desc, defaultProductDesc, idPrefix, displayOrder } = req.body;
+    if (!id || !name) {
+        return res.status(400).json({ success: false, message: 'Category ID and name are required.' });
+    }
+
+    const categories = readCategories();
+    
+    // Ensure no duplicate ID
+    const cleanId = id.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    if (categories.find(c => c.id === cleanId)) {
+        return res.status(409).json({ success: false, message: `Category "${cleanId}" already exists.` });
+    }
+    
+    // Auto-generate prefix if not provided
+    const prefix = parseInt(idPrefix) || (Math.max(0, ...categories.map(c => c.idPrefix)) + 100);
+    if (categories.find(c => c.idPrefix === prefix)) {
+        return res.status(409).json({ success: false, message: `ID prefix ${prefix} is already in use.` });
+    }
+
+    const newCat = {
+        id: cleanId,
+        name: name.trim(),
+        emoji: emoji || '📦',
+        desc: (desc || '').trim(),
+        defaultProductDesc: (defaultProductDesc || '').trim() || `${name.trim()} product.`,
+        idPrefix: prefix,
+        displayOrder: parseInt(displayOrder) || categories.length + 1
+    };
+
+    categories.push(newCat);
+    categories.sort((a, b) => a.displayOrder - b.displayOrder);
+    writeCategories(categories);
+    sbSync.syncCategory(newCat); // Background sync
+
+    console.log(`✅ Category added: ${newCat.name} (ID: ${newCat.id}, prefix: ${newCat.idPrefix})`);
+    res.status(201).json({ success: true, category: newCat });
+});
+
+// ── POST: Edit a category (admin only) ──
+app.post('/api/admin/categories/edit', requireAdmin, (req, res) => {
+    const { id, name, emoji, desc, defaultProductDesc, displayOrder } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Category ID is required.' });
+
+    const categories = readCategories();
+    const idx = categories.findIndex(c => c.id === id);
+    if (idx === -1) return res.status(404).json({ success: false, message: 'Category not found.' });
+
+    if (name !== undefined) categories[idx].name = name.trim();
+    if (emoji !== undefined) categories[idx].emoji = emoji;
+    if (desc !== undefined) categories[idx].desc = desc.trim();
+    if (defaultProductDesc !== undefined) categories[idx].defaultProductDesc = defaultProductDesc.trim();
+    if (displayOrder !== undefined) categories[idx].displayOrder = parseInt(displayOrder);
+
+    categories.sort((a, b) => a.displayOrder - b.displayOrder);
+    writeCategories(categories);
+    sbSync.syncCategory(categories[idx]); // Background sync
+
+    console.log(`✅ Category updated: ${categories[idx].name} (ID: ${id})`);
+    res.status(200).json({ success: true, category: categories[idx] });
+});
+
+// ── POST: Delete a category (admin only) ──
+app.post('/api/admin/categories/delete', requireAdmin, (req, res) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Category ID is required.' });
+
+    // Prevent deleting categories that still have products
+    const products = readProducts();
+    const productsInCategory = products.filter(p => p.category === id);
+    if (productsInCategory.length > 0) {
+        return res.status(400).json({ 
+            success: false, 
+            message: `Cannot delete — ${productsInCategory.length} product(s) still in this category. Move or delete them first.` 
+        });
+    }
+
+    let categories = readCategories();
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return res.status(404).json({ success: false, message: 'Category not found.' });
+
+    categories = categories.filter(c => c.id !== id);
+    writeCategories(categories);
+    sbSync.syncCategory(id, 'delete'); // Background sync
+
+    console.log(`🗑️ Category deleted: ${cat.name} (ID: ${id})`);
+    res.status(200).json({ success: true, message: `Category "${cat.name}" has been deleted.` });
+});
+
+
+// ═══════════════════════════════════════════════════════════
+//  SITE CONTENT MANAGEMENT (CMS)
+// ═══════════════════════════════════════════════════════════
+
+// ── GET: Fetch site content (public) ──
+app.get('/api/site-content', (req, res) => {
+    const content = readSiteContent();
+    res.status(200).json({ success: true, content });
+});
+
+// ── POST: Update a single section of site content (admin only) ──
+app.post('/api/admin/site-content/update', requireAdmin, (req, res) => {
+    const { section, data } = req.body;
+    if (!section || !data) {
+        return res.status(400).json({ success: false, message: 'Section and data are required.' });
+    }
+
+    const content = readSiteContent();
+    content[section] = data;
+    writeSiteContent(content);
+    sbSync.syncSiteContent(section, data); // Background sync
+
+    console.log(`✅ Site content updated: section "${section}"`);
+    res.status(200).json({ success: true, message: `Section "${section}" updated successfully.` });
+});
+
+// ── POST: Update full site content (admin only) ──
+app.post('/api/admin/site-content/update-all', requireAdmin, (req, res) => {
+    const { content } = req.body;
+    if (!content || typeof content !== 'object') {
+        return res.status(400).json({ success: false, message: 'Content object is required.' });
+    }
+
+    writeSiteContent(content);
+    sbSync.syncAllSiteContent(content); // Background sync
+
+    console.log(`✅ Full site content updated`);
+    res.status(200).json({ success: true, message: 'All site content updated successfully.' });
 });
 
 
@@ -836,17 +1059,40 @@ app.get('/health', (req, res) => {
             whatsapp:    !!WHATSAPP_TOKEN,
             googleSheet: !!GOOGLE_SCRIPT_URL,
             razorpay:    !!razorpay,
+            supabase:    sbSync.isConfigured,
             cors:        ALLOWED_ORIGIN,
         },
     });
 });
 
+// ── ORDER HISTORY (public, by phone) ──
+app.get('/api/orders/history', async (req, res) => {
+    const { phone } = req.query;
+    if (!phone || !sbSync.supabase) {
+        return res.status(400).json({ success: false, message: 'Phone required and database must be configured.' });
+    }
+    const digits = phone.replace(/\D/g, '');
+    try {
+        const { data: orders } = await sbSync.supabase.from('orders').select('*').eq('phone', digits).order('created_at', { ascending: false });
+        const { data: bookings } = await sbSync.supabase.from('bookings').select('*').eq('phone', digits).order('created_at', { ascending: false });
+        return res.status(200).json({ success: true, orders: orders || [], bookings: bookings || [] });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Could not fetch history.' });
+    }
+});
+
 // -- 9. START -------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
     console.log(`   Razorpay  : ${razorpay    ? '✅ configured' : '❌ not set'}`);
     console.log(`   WhatsApp  : ${WHATSAPP_TOKEN ? '✅ configured' : '❌ not set'}`);
     console.log(`   Sheet     : ${GOOGLE_SCRIPT_URL ? '✅ configured' : '❌ not set'}`);
+    console.log(`   Supabase  : ${sbSync.isConfigured ? '✅ configured' : '❌ not set'}`);
     console.log(`   CORS      : ${ALLOWED_ORIGIN}`);
+
+    // Pull latest data from Supabase on startup (fixes ephemeral filesystem issue)
+    if (sbSync.isConfigured) {
+        await sbSync.pullFromSupabase();
+    }
 });

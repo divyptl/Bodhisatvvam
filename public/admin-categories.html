@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bodhisatvvam — Category Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1c3a28;--forest-light:#2d5a3d;--sage:#7a9e7e;--cream:#f5efe3;--cream-dark:#ede4d2;--amber:#c47c3a;--gold:#d4aa60;--text-dark:#1a2820;--text-mid:#3d5047;--text-light:#7a9080;--danger:#b85c38;--success:#2d6a4f}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh}
+.top-nav{background:var(--forest);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.top-nav-logo{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--cream);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.top-nav-logo span{color:var(--gold);font-style:italic}
+.nav-links{display:flex;gap:12px;align-items:center}
+.nav-links a{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);text-decoration:none;padding:8px 16px;border:1px solid rgba(212,170,96,.3);transition:all .2s}
+.nav-links a:hover{background:rgba(212,170,96,.1);color:var(--gold)}
+.page-header{padding:32px 40px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--forest)}
+.btn{padding:10px 20px;border:none;font-family:'Jost',sans-serif;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--forest);color:var(--cream)}.btn-primary:hover{background:var(--forest-light)}
+.btn-amber{background:var(--amber);color:white}.btn-amber:hover{background:#d4894a}
+.btn-outline{background:transparent;border:1px solid var(--cream-dark);color:var(--text-mid)}.btn-outline:hover{border-color:var(--forest);color:var(--forest)}
+.btn-danger{background:var(--danger);color:white}.btn-danger:hover{background:#c96842}
+.btn-sm{padding:6px 14px;font-size:.7rem}
+.grid{padding:20px 40px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.cat-card{background:white;border:1px solid var(--cream-dark);padding:24px;transition:border-color .2s,box-shadow .2s}
+.cat-card:hover{border-color:var(--sage);box-shadow:0 4px 20px rgba(28,58,40,.08)}
+.cat-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cat-emoji{font-size:2rem}
+.cat-meta{font-size:.65rem;color:var(--text-light);background:var(--cream);padding:2px 8px}
+.cat-name{font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--forest);margin-bottom:4px}
+.cat-desc{font-size:.82rem;color:var(--text-light);line-height:1.5;margin-bottom:8px}
+.cat-info{display:flex;gap:16px;font-size:.75rem;color:var(--text-mid);margin-bottom:12px}
+.cat-actions{display:flex;gap:6px;border-top:1px solid var(--cream-dark);padding-top:12px}
+.cat-actions .btn{flex:1;text-align:center}
+.modal-bg{position:fixed;inset:0;background:rgba(28,58,40,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--cream);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-head{padding:24px 28px 18px;border-bottom:1px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center}
+.modal-head h2{font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--forest)}
+.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-light)}
+.modal-body{padding:24px 28px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-mid);margin-bottom:6px;font-weight:500}
+.form-group input,.form-group textarea{width:100%;padding:10px 14px;border:1px solid var(--cream-dark);background:white;font-family:'Jost',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--forest)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group textarea{resize:vertical;min-height:60px}
+.modal-foot{padding:16px 28px 24px;display:flex;gap:12px;justify-content:flex-end}
+.toast-wrap{position:fixed;bottom:32px;right:32px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-msg{background:var(--forest);color:var(--cream);padding:12px 20px;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.2);transform:translateX(120%);transition:transform .3s ease}
+.toast-msg.show{transform:translateX(0)}
+.empty-state{text-align:center;padding:80px 40px;color:var(--text-light)}
+.empty-state span{font-size:3rem;display:block;margin-bottom:12px}
+.help-text{font-size:.72rem;color:var(--text-light);margin-top:4px;font-style:italic}
+</style>
+</head>
+<body>
+<nav class="top-nav">
+  <a href="/admin.html" class="top-nav-logo">Bodhi<span>satvvam</span></a>
+  <div class="nav-links">
+    <a href="/admin.html">← Dashboard</a>
+    <a href="/admin-products.html">📦 Products</a>
+    <a href="/admin-content.html">🌐 Content</a>
+    <a href="/" target="_blank">View Store</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1 class="page-title">📂 Category Manager</h1>
+  <div style="display:flex;gap:12px">
+    <button class="btn btn-amber" onclick="openAddModal()">+ New Category</button>
+    <button class="btn btn-outline" onclick="loadCategories()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="grid" id="catGrid"><div class="empty-state"><span>📂</span>Loading categories...</div></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="catModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Add Category</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editMode">
+      <div class="form-group"><label>Category ID *</label><input id="fId" placeholder="e.g. crystal_bottles"><div class="help-text">Lowercase, underscores only. Cannot be changed after creation.</div></div>
+      <div class="form-group"><label>Display Name *</label><input id="fName" placeholder="e.g. Crystal Water Bottles"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Emoji</label><input id="fEmoji" placeholder="💎"></div>
+        <div class="form-group"><label>ID Prefix</label><input type="number" id="fPrefix" placeholder="Auto"><div class="help-text">Products get IDs starting from this number</div></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="fDesc" placeholder="Short description of this category..."></textarea></div>
+      <div class="form-group"><label>Default Product Description</label><input id="fDefaultDesc" placeholder="e.g. Crystal-infused water bottle."></div>
+      <div class="form-group"><label>Display Order</label><input type="number" id="fOrder" placeholder="1" min="1"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveCategory()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="modal-bg" id="deleteModal">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <div class="modal-body" style="padding:40px 28px">
+      <span style="font-size:3rem;display:block;margin-bottom:16px">🗑️</span>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--forest);margin-bottom:8px">Delete Category?</h2>
+      <p id="deleteMsg" style="color:var(--text-mid);margin-bottom:24px"></p>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <button class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const API_BASE = '';
+let allCategories = [];
+let deleteTargetId = null;
+
+function getToken() { return sessionStorage.getItem('bdh_token') || prompt('Enter admin token:') || ''; }
+
+async function loadCategories() {
+  try {
+    const res = await fetch(`${API_BASE}/api/categories`);
+    const data = await res.json();
+    allCategories = data.success ? data.categories : [];
+    renderCategories();
+    toast('✅ ' + allCategories.length + ' categories loaded');
+  } catch(e) { document.getElementById('catGrid').innerHTML = '<div class="empty-state"><span>❌</span>Could not load categories.</div>'; }
+}
+
+function renderCategories() {
+  const grid = document.getElementById('catGrid');
+  if (!allCategories.length) { grid.innerHTML = '<div class="empty-state"><span>📂</span>No categories yet. Click "+ New Category" to add one.</div>'; return; }
+  grid.innerHTML = allCategories.map(c => `<div class="cat-card">
+    <div class="cat-card-top"><span class="cat-emoji">${c.emoji}</span><span class="cat-meta">ID: ${c.id} · Prefix: ${c.idPrefix}</span></div>
+    <div class="cat-name">${c.name}</div>
+    <div class="cat-desc">${c.desc || 'No description'}</div>
+    <div class="cat-info"><span>📋 Default: "${c.defaultProductDesc || '—'}"</span><span>📊 Order: ${c.displayOrder}</span></div>
+    <div class="cat-actions">
+      <button class="btn btn-outline btn-sm" onclick="openEditModal('${c.id}')">✏️ Edit</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="openDeleteModal('${c.id}')">🗑️</button>
+    </div>
+  </div>`).join('');
+}
+
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = 'Add New Category';
+  document.getElementById('editMode').value = '';
+  document.getElementById('fId').value = '';
+  document.getElementById('fId').disabled = false;
+  document.getElementById('fName').value = '';
+  document.getElementById('fEmoji').value = '';
+  document.getElementById('fPrefix').value = '';
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fDefaultDesc').value = '';
+  document.getElementById('fOrder').value = allCategories.length + 1;
+  document.getElementById('saveBtn').textContent = 'Add Category';
+  document.getElementById('catModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const c = allCategories.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('modalTitle').textContent = 'Edit Category';
+  document.getElementById('editMode').value = id;
+  document.getElementById('fId').value = c.id;
+  document.getElementById('fId').disabled = true;
+  document.getElementById('fName').value = c.name;
+  document.getElementById('fEmoji').value = c.emoji || '';
+  document.getElementById('fPrefix').value = c.idPrefix || '';
+  document.getElementById('fDesc').value = c.desc || '';
+  document.getElementById('fDefaultDesc').value = c.defaultProductDesc || '';
+  document.getElementById('fOrder').value = c.displayOrder || 1;
+  document.getElementById('saveBtn').textContent = 'Save Changes';
+  document.getElementById('catModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('catModal').classList.remove('open'); }
+
+async function saveCategory() {
+  const token = getToken();
+  const editMode = document.getElementById('editMode').value;
+  const body = {
+    id: document.getElementById('fId').value.trim(),
+    name: document.getElementById('fName').value.trim(),
+    emoji: document.getElementById('fEmoji').value.trim(),
+    desc: document.getElementById('fDesc').value.trim(),
+    defaultProductDesc: document.getElementById('fDefaultDesc').value.trim(),
+    idPrefix: parseInt(document.getElementById('fPrefix').value) || undefined,
+    displayOrder: parseInt(document.getElementById('fOrder').value) || 1
+  };
+  if (!body.id || !body.name) { toast('❌ ID and name are required'); return; }
+  const url = editMode ? '/api/admin/categories/edit' : '/api/admin/categories/add';
+  try {
+    const res = await fetch(API_BASE + url, { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify(body) });
+    const data = await res.json();
+    if (data.success) { toast('✅ Category ' + (editMode ? 'updated' : 'added')); closeModal(); loadCategories(); }
+    else { toast('❌ ' + (data.message || 'Failed')); }
+  } catch(e) { toast('❌ Connection error'); }
+}
+
+function openDeleteModal(id) {
+  deleteTargetId = id;
+  const c = allCategories.find(x => x.id === id);
+  document.getElementById('deleteMsg').textContent = `Are you sure you want to delete "${c ? c.name : id}"? Categories with existing products cannot be deleted.`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); deleteTargetId = null; }
+
+async function confirmDelete() {
+  if (!deleteTargetId) return;
+  const token = getToken();
+  try {
+    const res = await fetch(API_BASE + '/api/admin/categories/delete', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({id:deleteTargetId}) });
+    const data = await res.json();
+    if (data.success) { toast('✅ Category deleted'); closeDeleteModal(); loadCategories(); }
+    else { toast('❌ ' + (data.message || 'Failed')); }
+  } catch(e) { toast('❌ Connection error'); }
+}
+
+function toast(msg) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast-msg'; el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 3000);
+}
+
+loadCategories();
+</script>
+</body>
+</html>

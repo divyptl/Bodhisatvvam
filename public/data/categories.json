@@ -1,0 +1,29 @@
+[
+  {
+    "id": "salts",
+    "name": "Energy Salts",
+    "emoji": "🧂",
+    "desc": "Specially formulated energy-infused salts to protect, cleanse, and attract abundance.",
+    "defaultProductDesc": "Energy-infused salt.",
+    "idPrefix": 100,
+    "displayOrder": 1
+  },
+  {
+    "id": "healing",
+    "name": "Healing Sessions",
+    "emoji": "✨",
+    "desc": "One-on-one personal healing sessions with Neepa Patel.",
+    "defaultProductDesc": "One-on-one personal healing session.",
+    "idPrefix": 200,
+    "displayOrder": 2
+  },
+  {
+    "id": "candles",
+    "name": "Infused Candles",
+    "emoji": "🕯️",
+    "desc": "Energy-infused candles charged with specific intentions.",
+    "defaultProductDesc": "Energy-infused candle.",
+    "idPrefix": 300,
+    "displayOrder": 3
+  }
+]

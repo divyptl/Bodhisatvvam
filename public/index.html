@@ -1113,11 +1113,9 @@
       <div class="section-tag">Our Offerings</div>
       <h2 class="section-title">Shop our <em>collection</em></h2>
       <div class="products-controls">
-        <div class="filter-tabs" style="margin-top:0;">
+        <div class="filter-tabs" style="margin-top:0;" id="filterTabsContainer">
           <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
-          <button class="filter-tab" onclick="filterProducts('salts', this)">Energy Salts</button>
-          <button class="filter-tab" onclick="filterProducts('candles', this)">Infused Candles</button>
-          <button class="filter-tab" onclick="filterProducts('healing', this)">Personal Healing</button>
+          <!-- Dynamically populated from categories API -->
         </div>
         <select id="sortSelect" class="sort-select" onchange="changeSort(this.value)">
           <option value="featured">Sort By: Featured</option>
@@ -1378,6 +1376,80 @@
 // Products are loaded dynamically from /data/products.json
 // They can be managed via the Admin Dashboard → Products tab
 let products = []
+let siteCategories = []
+let siteContent = null
+
+// Load categories from API
+async function loadCategoriesFromServer() {
+  try {
+    const res = await fetch('/api/categories');
+    const data = await res.json();
+    siteCategories = data.success ? data.categories : [];
+    // Build dynamic filter tabs
+    const container = document.getElementById('filterTabsContainer');
+    if (container && siteCategories.length > 0) {
+      container.innerHTML = '<button class="filter-tab active" onclick="filterProducts(\'all\', this)">All</button>' +
+        siteCategories.map(c => `<button class="filter-tab" onclick="filterProducts('${c.id}', this)">${c.name}</button>`).join('');
+    }
+  } catch (err) { console.warn('Categories load error:', err.message); }
+}
+
+// Load site content for dynamic sections
+async function loadSiteContent() {
+  try {
+    const res = await fetch('/api/site-content');
+    const data = await res.json();
+    if (data.success) {
+      siteContent = data.content;
+      applySiteContent();
+    }
+  } catch (err) { console.warn('Site content load error:', err.message); }
+}
+
+function applySiteContent() {
+  if (!siteContent) return;
+  // Hero
+  const h = siteContent.hero;
+  if (h) {
+    const heroTag = document.querySelector('.hero-tag');
+    const heroH1 = document.querySelector('.hero-h1');
+    const heroSub = document.querySelector('.hero-sub');
+    if (heroTag) heroTag.textContent = h.tag || heroTag.textContent;
+    if (heroH1) heroH1.innerHTML = h.title || heroH1.innerHTML;
+    if (heroSub) heroSub.textContent = h.subtitle || heroSub.textContent;
+    const badgeNum = document.querySelector('.badge-number');
+    const badgeTxt = document.querySelector('.badge-text');
+    if (badgeNum) badgeNum.textContent = h.badgeNumber || badgeNum.textContent;
+    if (badgeTxt) badgeTxt.textContent = h.badgeText || badgeTxt.textContent;
+  }
+  // Testimonials
+  const t = siteContent.testimonials;
+  if (t && t.items && t.items.length > 0) {
+    const grid = document.querySelector('.testimonials-grid');
+    if (grid) {
+      grid.innerHTML = t.items.map(item => `
+        <div class="testimonial-card">
+          <div class="testimonial-stars">${'⭐'.repeat(item.stars || 5)}</div>
+          <p class="testimonial-text">"${item.text}"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">${item.avatar || item.name?.charAt(0) || '?'}</div>
+            <div><div class="testimonial-name">${item.name}</div><div class="testimonial-location">${item.location}</div></div>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+  // Footer
+  const f = siteContent.footer;
+  if (f) {
+    const brand = document.querySelector('.footer-brand');
+    const tagline = document.querySelector('.footer-tagline');
+    const copyright = document.querySelector('.footer-copyright');
+    if (brand) brand.textContent = f.brand || brand.textContent;
+    if (tagline) tagline.textContent = f.tagline || tagline.textContent;
+    if (copyright) copyright.textContent = f.copyright || copyright.textContent;
+  }
+}
 
 // Load products from JSON file (fetched once at page load)
 async function loadProductsFromServer() {
@@ -1977,7 +2049,12 @@ function updatePageMeta(filter) {
 
 // ── INIT: load products from server, then wire up search bar ──
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadProductsFromServer();
+  // Load categories, site content, and products in parallel
+  await Promise.all([
+    loadCategoriesFromServer(),
+    loadSiteContent(),
+    loadProductsFromServer()
+  ]);
 
   const searchBar = document.getElementById('searchBar');
   if (searchBar) {
