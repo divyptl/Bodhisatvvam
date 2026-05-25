@@ -1118,7 +1118,7 @@ app.get('/health', (req, res) => {
 
 // ── CUSTOMER AUTHENTICATION (public) ──
 app.post('/api/customer/register', (req, res) => {
-    const { phone, name, password } = req.body;
+    const { phone, name, password, streetAddress, city, state, zipCode } = req.body;
     if (!phone || !name || !password || password.length < 6) {
         return res.status(400).json({ success: false, message: 'Valid phone, name, and password (min 6 chars) required.' });
     }
@@ -1127,12 +1127,17 @@ app.post('/api/customer/register', (req, res) => {
     if (customers.find(c => c.phone === cleanPhone)) {
         return res.status(400).json({ success: false, message: 'An account with this phone number already exists.' });
     }
-    const newCustomer = { phone: cleanPhone, name: name.trim(), password_hash: hashPassword(password), created_at: new Date().toISOString() };
+    const newCustomer = {
+        phone: cleanPhone, name: name.trim(), password_hash: hashPassword(password),
+        street_address: (streetAddress || '').trim(), city: (city || '').trim(),
+        state: (state || '').trim(), zip_code: (zipCode || '').trim(),
+        created_at: new Date().toISOString()
+    };
     customers.push(newCustomer);
     writeCustomers(customers);
     sbSync.syncCustomer(newCustomer); // Save to Supabase
     
-    res.status(201).json({ success: true, message: 'Account created successfully', token: generateCustomerToken(cleanPhone) });
+    res.status(201).json({ success: true, message: 'Account created successfully', token: generateCustomerToken(cleanPhone), name: newCustomer.name });
 });
 
 app.post('/api/customer/login', (req, res) => {
@@ -1143,7 +1148,17 @@ app.post('/api/customer/login', (req, res) => {
     if (!customer || !verifyPassword(password, customer.password_hash)) {
         return res.status(401).json({ success: false, message: 'Invalid phone number or password.' });
     }
-    res.status(200).json({ success: true, message: 'Login successful', token: generateCustomerToken(cleanPhone), name: customer.name });
+    const { password_hash, ...safeProfile } = customer;
+    res.status(200).json({ success: true, message: 'Login successful', token: generateCustomerToken(cleanPhone), profile: safeProfile });
+});
+
+// ── GET customer profile (protected) ──
+app.get('/api/customer/profile', verifyCustomerToken, (req, res) => {
+    const customers = readCustomers();
+    const customer = customers.find(c => c.phone === req.customerPhone);
+    if (!customer) return res.status(404).json({ success: false, message: 'Customer not found.' });
+    const { password_hash, ...safeProfile } = customer;
+    res.status(200).json({ success: true, profile: safeProfile });
 });
 
 // ── ORDER HISTORY (protected by customer token) ──

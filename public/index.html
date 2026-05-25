@@ -1003,7 +1003,7 @@
     <li><a href="#products">Shop</a></li>
     <li><a href="#about">Our Story</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="/account.html" style="color: var(--amber);">👤 My Account</a></li>
+    <li id="navAccountLink"><a href="/account.html" style="color:var(--amber); font-weight:600;">Sign In</a></li>
   </ul>
   <div class="nav-right">
     <button class="cart-btn" onclick="toggleCart()">
@@ -1020,7 +1020,7 @@
   <a href="#products" onclick="toggleMobileMenu()">Shop</a>
   <a href="#about" onclick="toggleMobileMenu()">Our Story</a>
   <a href="#contact" onclick="toggleMobileMenu()">Contact</a>
-  <a href="/account.html" style="color: var(--amber);">👤 My Account</a>
+  <a href="/account.html" id="mobileAccountLink" style="color: var(--amber);">Sign In</a>
   <button class="btn-primary" style="margin-top:20px;cursor:none;" onclick="toggleMobileMenu(); toggleCart();">🌿 View Cart</button>
 </div>
 
@@ -1745,6 +1745,9 @@ function openCheckout() {
   `;
   document.getElementById('checkoutOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  // Auto-fill from saved profile
+  autofillCheckout();
 }
 
 function closeCheckout() {
@@ -2065,7 +2068,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   renderProducts('all');
   observeAnimations();
+  updateNavGreeting();
 });
+
+// ── LOGGED-IN GREETING & AUTOFILL ──
+function updateNavGreeting() {
+  const profile = getStoredProfile();
+  const navEl = document.getElementById('navAccountLink');
+  const mobileEl = document.getElementById('mobileAccountLink');
+  if (profile && profile.name) {
+    const firstName = profile.name.split(' ')[0];
+    if (navEl) navEl.innerHTML = `<a href="/account.html" style="color:var(--amber); font-weight:600;">Namaste, ${firstName}! 🙏</a>`;
+    if (mobileEl) { mobileEl.textContent = `Namaste, ${firstName}! 🙏`; }
+  } else {
+    if (navEl) navEl.innerHTML = `<a href="/account.html" style="color:var(--amber); font-weight:600;">Sign In</a>`;
+    if (mobileEl) { mobileEl.textContent = 'Sign In'; }
+  }
+}
+
+function getStoredProfile() {
+  try { return JSON.parse(localStorage.getItem('bodhi_customer_profile')); }
+  catch { return null; }
+}
+
+function autofillCheckout() {
+  const profile = getStoredProfile();
+  if (!profile) return;
+  const parts = (profile.name || '').trim().split(' ');
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && !el.value && val) el.value = val; };
+  setVal('firstName', parts[0] || '');
+  setVal('lastName', parts.slice(1).join(' ') || '');
+  setVal('phoneNum', profile.phone || '');
+  setVal('streetAddr', profile.street_address || '');
+  setVal('city', profile.city || '');
+  setVal('state', profile.state || '');
+  setVal('zipCode', profile.zip_code || '');
+}
 
 </script>
 

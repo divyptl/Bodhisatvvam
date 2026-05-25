@@ -264,21 +264,39 @@
   </div>
   
   <!-- REGISTER VIEW -->
-  <div id="registerView" style="display: none; max-width: 400px; margin: 0 auto;">
+  <div id="registerView" style="display: none; max-width: 500px; margin: 0 auto;">
     <h1>Create Account</h1>
     <div class="card">
       <div id="registerErrorMsg"></div>
       <form id="registerForm" onsubmit="handleRegister(event)">
         <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" id="regName" placeholder="Your name" required>
+          <label>Full Name *</label>
+          <input type="text" id="regName" placeholder="First and last name" required>
         </div>
         <div class="form-group">
-          <label>Phone Number</label>
-          <input type="text" id="regPhone" placeholder="10-digit number" required>
+          <label>WhatsApp Number *</label>
+          <input type="tel" id="regPhone" placeholder="+91 9876543210" required>
         </div>
         <div class="form-group">
-          <label>Password</label>
+          <label>Full Address</label>
+          <input type="text" id="regStreetAddress" placeholder="House no, Street, Landmark">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="regCity" placeholder="e.g. Surat">
+          </div>
+          <div class="form-group">
+            <label>State</label>
+            <input type="text" id="regState" placeholder="e.g. Gujarat">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>PIN Code</label>
+          <input type="text" id="regZipCode" placeholder="000000">
+        </div>
+        <div class="form-group">
+          <label>Password *</label>
           <input type="password" id="regPassword" placeholder="Min 6 characters" required minlength="6">
         </div>
         <button type="submit" class="btn-primary" id="regBtn">Create Account</button>
@@ -360,7 +378,8 @@
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('bodhi_customer_token', data.token);
-        localStorage.setItem('bodhi_customer_name', data.name);
+        localStorage.setItem('bodhi_customer_name', data.profile.name);
+        localStorage.setItem('bodhi_customer_profile', JSON.stringify(data.profile));
         checkAuth();
       } else {
         err.innerText = data.message;
@@ -379,6 +398,10 @@
     const name = document.getElementById('regName').value;
     const phone = document.getElementById('regPhone').value;
     const password = document.getElementById('regPassword').value;
+    const streetAddress = document.getElementById('regStreetAddress').value;
+    const city = document.getElementById('regCity').value;
+    const state = document.getElementById('regState').value;
+    const zipCode = document.getElementById('regZipCode').value;
     
     btn.disabled = true; btn.innerText = 'Creating...'; err.innerText = '';
     
@@ -386,12 +409,14 @@
       const res = await fetch('/api/customer/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, password })
+        body: JSON.stringify({ name, phone, password, streetAddress, city, state, zipCode })
       });
       const data = await res.json();
       if (data.success) {
+        const profile = { name: name.trim(), phone: phone.replace(/\D/g, ''), street_address: streetAddress, city, state, zip_code: zipCode };
         localStorage.setItem('bodhi_customer_token', data.token);
-        localStorage.setItem('bodhi_customer_name', name);
+        localStorage.setItem('bodhi_customer_name', data.name);
+        localStorage.setItem('bodhi_customer_profile', JSON.stringify(profile));
         checkAuth();
       } else {
         err.innerText = data.message;
@@ -406,6 +431,7 @@
   function handleLogout() {
     localStorage.removeItem('bodhi_customer_token');
     localStorage.removeItem('bodhi_customer_name');
+    localStorage.removeItem('bodhi_customer_profile');
     checkAuth();
   }
 
