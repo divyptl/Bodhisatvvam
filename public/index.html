@@ -1798,7 +1798,7 @@ function collectOrderData() {
              document.getElementById('state').value.trim() + ' ' +
              document.getElementById('zipCode').value.trim(),
     customerNotes: finalNotesArray.join(' | '), // NEW FIELD
-    items:   cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes || '' })),
+    items:   cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price, notes: i.notes || '' })),
     total:   '₹' + cart.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2),
   };
 }
