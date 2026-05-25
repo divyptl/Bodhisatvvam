@@ -16,6 +16,7 @@ const crypto    = require('crypto'); // Built-in Node.js -- no install needed
 const rateLimit = require('express-rate-limit');
 const Razorpay  = require('razorpay');
 const multer    = require('multer');
+const helmet    = require('helmet');
 const sbSync    = require('./supabase-sync');
 
 const app = express();
@@ -59,6 +60,12 @@ const allowedOrigins = ALLOWED_ORIGIN === '*'
     ? ['*']
     : ALLOWED_ORIGIN.split(',').map(o => o.trim());
 
+// Helmet — sets secure HTTP headers (X-Content-Type-Options, X-Frame-Options, etc.)
+app.use(helmet({
+    contentSecurityPolicy: false,  // Disabled because inline scripts are used in HTML
+    crossOriginEmbedderPolicy: false, // Allow Razorpay & external embeds
+}));
+
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
@@ -67,7 +74,7 @@ app.use(cors({
         callback(new Error('CORS blocked: ' + origin));
     },
     methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Token'],
     credentials: false,
 }));
 app.use(express.json({ limit: '100kb' }));
@@ -90,13 +97,21 @@ const adminLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const customerAuthLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 15,
+    message: { success: false, message: 'Too many attempts. Please wait 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 const adminSessions = new Set();
 
 // -- 5. HELPERS -----------------------------------------------------------
 const PRODUCTS_FILE = path.join(__dirname, 'public', 'data', 'products.json');
 const CATEGORIES_FILE = path.join(__dirname, 'public', 'data', 'categories.json');
 const SITE_CONTENT_FILE = path.join(__dirname, 'public', 'data', 'site-content.json');
-const CUSTOMERS_FILE = path.join(__dirname, 'public', 'data', 'customers.json');
+const CUSTOMERS_FILE = path.join(__dirname, 'data', 'customers.json');
 const PRODUCT_IMAGES_DIR = path.join(__dirname, 'public', 'images', 'products');
 
 function readProducts() {
@@ -671,7 +686,12 @@ function verifyPassword(password, storedHash) {
     const [salt, key] = storedHash.split(':');
     if (!salt || !key) return false;
     const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-    return key === hash;
+    // Timing-safe comparison to prevent timing attacks on password hashes
+    try {
+        return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(key, 'hex'));
+    } catch (e) {
+        return false;
+    }
 }
 
 function generateCustomerToken(phone) {
@@ -1117,7 +1137,7 @@ app.get('/health', (req, res) => {
 });
 
 // ── CUSTOMER AUTHENTICATION (public) ──
-app.post('/api/customer/register', (req, res) => {
+app.post('/api/customer/register', customerAuthLimiter, (req, res) => {
     const { phone, name, password, streetAddress, city, state, zipCode } = req.body;
     if (!phone || !name || !password || password.length < 6) {
         return res.status(400).json({ success: false, message: 'Valid phone, name, and password (min 6 chars) required.' });
@@ -1140,7 +1160,7 @@ app.post('/api/customer/register', (req, res) => {
     res.status(201).json({ success: true, message: 'Account created successfully', token: generateCustomerToken(cleanPhone), name: newCustomer.name });
 });
 
-app.post('/api/customer/login', (req, res) => {
+app.post('/api/customer/login', customerAuthLimiter, (req, res) => {
     const { phone, password } = req.body;
     const cleanPhone = (phone || '').replace(/\D/g, '');
     const customers = readCustomers();

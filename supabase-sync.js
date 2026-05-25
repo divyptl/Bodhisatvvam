@@ -21,7 +21,7 @@ const DATA_DIR = path.join(__dirname, 'public', 'data');
 const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
 const SITE_CONTENT_FILE = path.join(DATA_DIR, 'site-content.json');
-const CUSTOMERS_FILE = path.join(DATA_DIR, 'customers.json');
+const CUSTOMERS_FILE = path.join(__dirname, 'data', 'customers.json');
 
 // ── MAPPERS ──────────────────────────────────────────────
 
