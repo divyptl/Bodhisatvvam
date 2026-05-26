@@ -115,6 +115,8 @@ async function pullFromSupabase() {
         // Customers
         const { data: customers, error: custErr } = await supabase.from('customers').select('*');
         if (!custErr && customers) {
+            const dir = path.dirname(CUSTOMERS_FILE);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
             fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(customers, null, 2), 'utf-8');
             console.log(`   ✅ ${customers.length} customers synced`);
         }
