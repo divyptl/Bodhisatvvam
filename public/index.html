@@ -1001,8 +1001,9 @@
   <a href="#" class="nav-logo">Bodhisatvvam</a>
   <ul class="nav-links">
     <li><a href="#products">Shop</a></li>
+    <li><a href="/bundle.html">Bundles</a></li>
     <li><a href="#about">Our Story</a></li>
-    <li><a href="#contact">Contact</a></li>
+    <li><a href="/track.html">Track Order</a></li>
     <li id="navAccountLink"><a href="/account.html" style="color:var(--amber); font-weight:600;">Sign In</a></li>
   </ul>
   <div class="nav-right">
@@ -1018,10 +1019,10 @@
 
 <div class="mobile-menu" id="mobileMenu">
   <a href="#products" onclick="toggleMobileMenu()">Shop</a>
+  <a href="/bundle.html" onclick="toggleMobileMenu()">Bundles</a>
   <a href="#about" onclick="toggleMobileMenu()">Our Story</a>
-  <a href="#contact" onclick="toggleMobileMenu()">Contact</a>
+  <a href="/track.html" onclick="toggleMobileMenu()">Track Order</a>
   <a href="/account.html" id="mobileAccountLink" style="color: var(--amber);">Sign In</a>
-  <button class="btn-primary" style="margin-top:20px;cursor:none;" onclick="toggleMobileMenu(); toggleCart();">🌿 View Cart</button>
 </div>
 
 <section class="hero">
@@ -1672,6 +1673,9 @@ function updateCart() {
   document.getElementById('cartCount').textContent = count;
   document.getElementById('cartTotal').textContent = '₹' + total.toFixed(2);
 
+  // Save cart to server for abandoned cart recovery
+  saveCartToServer();
+
   const body = document.getElementById('cartBody');
   const footer = document.getElementById('cartFooter');
 
@@ -1831,6 +1835,8 @@ function showSuccess(orderId) {
     document.getElementById('successOverlay').classList.add('open');
     cart = [];
     updateCart();
+    // Clear saved cart from server after successful purchase
+    clearSavedCart();
   }, 300);
 }
 
@@ -2069,6 +2075,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderProducts('all');
   observeAnimations();
   updateNavGreeting();
+  checkBundleImport(); // Check if user came from Bundle Builder
 });
 
 // ── LOGGED-IN GREETING & AUTOFILL ──
@@ -2103,6 +2110,63 @@ function autofillCheckout() {
   setVal('city', profile.city || '');
   setVal('state', profile.state || '');
   setVal('zipCode', profile.zip_code || '');
+}
+
+// ── ABANDONED CART RECOVERY ──
+let cartSaveTimer = null;
+function saveCartToServer() {
+  clearTimeout(cartSaveTimer);
+  cartSaveTimer = setTimeout(() => {
+    const token = localStorage.getItem('bodhi_customer_token');
+    if (!token || cart.length === 0) return;
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    fetch(`${API_BASE}/api/cart/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ items: cart.map(i => ({ id: i.id, name: i.name, emoji: i.emoji, price: i.price, qty: i.qty })), total })
+    }).catch(() => {}); // Silent
+  }, 3000); // Debounce 3 seconds
+}
+
+function clearSavedCart() {
+  const token = localStorage.getItem('bodhi_customer_token');
+  if (!token) return;
+  fetch(`${API_BASE}/api/cart/clear`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({})
+  }).catch(() => {});
+}
+
+// ── BUNDLE IMPORT ──
+function checkBundleImport() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('bundle') !== '1') return;
+  const raw = sessionStorage.getItem('bodhi_bundle');
+  if (!raw) return;
+  try {
+    const bundle = JSON.parse(raw);
+    sessionStorage.removeItem('bodhi_bundle');
+    if (!bundle.items || !bundle.items.length) return;
+    
+    const subtotal = bundle.items.reduce((s, i) => s + i.price, 0);
+    const discount = bundle.discount !== undefined ? bundle.discount : 0.10;
+    const discountedPrice = subtotal * (1 - discount);
+    
+    cart.push({
+      id: 'bundle_' + Date.now(),
+      name: 'Custom Healing Bundle',
+      emoji: '🎁',
+      price: discountedPrice,
+      qty: 1,
+      notes: bundle.items.map(i => i.name).join(', ')
+    });
+    
+    updateCart();
+    // Remove ?bundle=1 from URL
+    window.history.replaceState({}, '', '/');
+    toggleCart(); // Open cart to show the bundle
+  } catch { /* ignore */ }
 }
 
 </script>

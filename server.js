@@ -611,6 +611,17 @@ app.post('/api/admin/update-status', requireAdmin, async (req, res) => {
             { headers: { 'Content-Type': 'application/json' }, timeout: 25000 }
         );
         console.log(`✅ Status updated → ${orderId} : ${status}`);
+
+        // Trigger review request when order is delivered
+        if (status === 'Delivered') {
+            generateReviewTokens(orderId).catch(e => console.warn('Review generation failed:', e.message));
+        }
+
+        // Update Supabase order status too
+        if (sbSync.supabase) {
+            sbSync.supabase.from('orders').update({ status }).eq('order_id', orderId).then(() => {}).catch(() => {});
+        }
+
         return res.status(200).json(response.data);
     } catch (err) {
         console.error('Status update error:', err.message);
@@ -1195,6 +1206,330 @@ app.get('/api/orders/history', verifyCustomerToken, async (req, res) => {
 });
 
 // -- 9. START -------------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
+//  NEW FEATURES: Order Tracking, Reviews, Journal,
+//                Analytics, Abandoned Cart, Bundle
+// ═══════════════════════════════════════════════════════════
+
+// ── MOON PHASE HELPER (used by Journal) ──
+function getMoonPhase() {
+    const now = new Date();
+    const cycle = 29.53058867;
+    const knownNewMoon = new Date('2024-01-11');
+    const diff = (now - knownNewMoon) / (1000 * 60 * 60 * 24);
+    const phase = ((diff % cycle) + cycle) % cycle;
+    if (phase < 1.85) return 'New Moon 🌑';
+    if (phase < 7.38) return 'Waxing Crescent 🌒';
+    if (phase < 9.22) return 'First Quarter 🌓';
+    if (phase < 14.77) return 'Waxing Gibbous 🌔';
+    if (phase < 16.61) return 'Full Moon 🌕';
+    if (phase < 22.15) return 'Waning Gibbous 🌖';
+    if (phase < 23.99) return 'Last Quarter 🌗';
+    return 'Waning Crescent 🌘';
+}
+
+// ── ORDER TRACKING (public) ──────────────────────────────
+app.get('/api/track', async (req, res) => {
+    const { orderId, phone } = req.query;
+    if (!orderId || !phone) return res.status(400).json({ success: false, message: 'Order ID and phone required.' });
+    if (!sbSync.supabase) return res.status(503).json({ success: false, message: 'Database not configured.' });
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    try {
+        const { data, error } = await sbSync.supabase
+            .from('orders').select('*')
+            .eq('order_id', orderId.trim())
+            .eq('phone', cleanPhone)
+            .single();
+
+        if (error || !data) return res.status(404).json({ success: false, message: 'Order not found. Please check your Order ID and phone number.' });
+        return res.status(200).json({ success: true, order: data });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Could not look up order.' });
+    }
+});
+
+// ── REVIEWS: Validate token ──────────────────────────────
+app.get('/api/review/validate', async (req, res) => {
+    const { token } = req.query;
+    if (!token || !sbSync.supabase) return res.status(400).json({ success: false });
+    try {
+        const { data } = await sbSync.supabase
+            .from('reviews').select('*').eq('review_token', token).single();
+        if (!data) return res.status(400).json({ success: false, message: 'Invalid review token.' });
+        if (data.comment && data.comment.length > 0) return res.status(400).json({ success: false, message: 'Review already submitted.' });
+
+        const product = readProducts().find(p => p.id === data.product_id);
+        return res.status(200).json({
+            success: true, productName: product?.name || 'Product',
+            productEmoji: product?.emoji || '🌿', orderId: data.order_id
+        });
+    } catch { return res.status(400).json({ success: false }); }
+});
+
+// ── REVIEWS: Submit review ───────────────────────────────
+app.post('/api/review/submit', async (req, res) => {
+    const { token, rating, comment } = req.body;
+    if (!token || !rating || !sbSync.supabase) return res.status(400).json({ success: false, message: 'Missing data.' });
+    if (rating < 1 || rating > 5) return res.status(400).json({ success: false, message: 'Rating must be 1-5.' });
+
+    try {
+        const { data: review } = await sbSync.supabase
+            .from('reviews').select('id, comment').eq('review_token', token).single();
+        if (!review) return res.status(400).json({ success: false, message: 'Invalid token.' });
+        if (review.comment && review.comment.length > 0) return res.status(400).json({ success: false, message: 'Already reviewed.' });
+
+        await sbSync.supabase.from('reviews').update({
+            rating, comment: (comment || '').substring(0, 500), approved: false
+        }).eq('review_token', token);
+
+        console.log(`⭐ Review submitted via token ${token.substring(0, 8)}...`);
+        return res.status(200).json({ success: true, message: 'Review submitted!' });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Could not save review.' });
+    }
+});
+
+// ── REVIEWS: Get approved reviews for a product (public) ──
+app.get('/api/reviews/:productId', async (req, res) => {
+    const productId = parseInt(req.params.productId);
+    if (!sbSync.supabase) return res.status(200).json({ success: true, reviews: [] });
+    try {
+        const { data } = await sbSync.supabase
+            .from('reviews').select('customer_name, rating, comment, created_at')
+            .eq('product_id', productId).eq('approved', true)
+            .order('created_at', { ascending: false }).limit(20);
+        return res.status(200).json({ success: true, reviews: data || [] });
+    } catch { return res.status(200).json({ success: true, reviews: [] }); }
+});
+
+// ── REVIEWS: Admin - list all pending reviews ─────────────
+app.post('/api/admin/reviews', requireAdmin, async (req, res) => {
+    if (!sbSync.supabase) return res.status(503).json({ success: false });
+    try {
+        const { data } = await sbSync.supabase
+            .from('reviews').select('*').not('comment', 'is', null)
+            .order('created_at', { ascending: false });
+        return res.status(200).json({ success: true, reviews: data || [] });
+    } catch { return res.status(500).json({ success: false }); }
+});
+
+// ── REVIEWS: Admin - approve/reject a review ──────────────
+app.post('/api/admin/reviews/approve', requireAdmin, async (req, res) => {
+    const { reviewId, approved } = req.body;
+    if (!reviewId || !sbSync.supabase) return res.status(400).json({ success: false });
+    try {
+        await sbSync.supabase.from('reviews').update({ approved: !!approved }).eq('id', reviewId);
+        console.log(`⭐ Review ${reviewId} ${approved ? 'approved' : 'rejected'}`);
+        return res.status(200).json({ success: true });
+    } catch { return res.status(500).json({ success: false }); }
+});
+
+// ── REVIEWS: Generate review tokens when order delivered ──
+async function generateReviewTokens(orderId) {
+    if (!sbSync.supabase) return;
+    try {
+        const { data: order } = await sbSync.supabase
+            .from('orders').select('*').eq('order_id', orderId).single();
+        if (!order || !Array.isArray(order.items)) return;
+
+        const siteUrl = ALLOWED_ORIGIN !== '*' ? ALLOWED_ORIGIN.split(',')[0] : 'https://bodhisatvvam.onrender.com';
+        const reviewLinks = [];
+
+        for (const item of order.items) {
+            if (!item.id) continue;
+            const token = crypto.randomBytes(32).toString('hex');
+            await sbSync.supabase.from('reviews').insert({
+                product_id: item.id, order_id: orderId,
+                customer_name: order.name.split(' ')[0],
+                phone: order.phone, rating: 5,
+                review_token: token
+            });
+            reviewLinks.push(`${item.name}: ${siteUrl}/review.html?token=${token}`);
+        }
+
+        // Send WhatsApp with review links
+        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID && reviewLinks.length > 0) {
+            const msg = `*Namaste ${order.name.split(' ')[0]},* 🙏\n\n` +
+                `Your order ${orderId} has been delivered! ✨\n\n` +
+                `We'd love to hear about your experience:\n\n` +
+                reviewLinks.join('\n') + `\n\n` +
+                `_Thank you for choosing Bodhisatvvam_ 🌸`;
+            try {
+                await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+                    { messaging_product: 'whatsapp', to: '+' + order.phone, type: 'text', text: { body: msg } },
+                    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+                );
+                console.log(`📱 Review request sent → ${orderId}`);
+            } catch (e) { console.warn('Review WA failed:', e.message); }
+        }
+    } catch (e) { console.error('Review token generation failed:', e.message); }
+}
+
+// ── HEALING JOURNAL (customer-authenticated) ──────────────
+app.get('/api/journal', verifyCustomerToken, async (req, res) => {
+    if (!sbSync.supabase) return res.status(503).json({ success: false, message: 'Database not configured.' });
+    try {
+        const { data } = await sbSync.supabase
+            .from('journal_entries').select('*')
+            .eq('phone', req.customerPhone)
+            .order('created_at', { ascending: false }).limit(50);
+        return res.status(200).json({ success: true, entries: data || [] });
+    } catch { return res.status(500).json({ success: false }); }
+});
+
+app.post('/api/journal', verifyCustomerToken, async (req, res) => {
+    const { title, content, mood } = req.body;
+    if (!content || content.trim().length < 1) return res.status(400).json({ success: false, message: 'Content required.' });
+    if (!sbSync.supabase) return res.status(503).json({ success: false, message: 'Database not configured.' });
+
+    try {
+        const entry = {
+            phone: req.customerPhone,
+            title: (title || '').substring(0, 200),
+            content: content.substring(0, 5000),
+            mood_emoji: mood || '🌿',
+            moon_phase: getMoonPhase(),
+        };
+        const { data, error } = await sbSync.supabase.from('journal_entries').insert(entry).select().single();
+        if (error) throw error;
+        return res.status(201).json({ success: true, entry: data });
+    } catch (err) { return res.status(500).json({ success: false, message: 'Could not save entry.' }); }
+});
+
+app.post('/api/journal/delete', verifyCustomerToken, async (req, res) => {
+    const { entryId } = req.body;
+    if (!entryId || !sbSync.supabase) return res.status(400).json({ success: false });
+    try {
+        await sbSync.supabase.from('journal_entries').delete()
+            .eq('id', entryId).eq('phone', req.customerPhone);
+        return res.status(200).json({ success: true });
+    } catch { return res.status(500).json({ success: false }); }
+});
+
+// ── ADMIN ANALYTICS ──────────────────────────────────────
+app.post('/api/admin/analytics', requireAdmin, async (req, res) => {
+    if (!sbSync.supabase) return res.status(503).json({ success: false, message: 'Database not configured.' });
+    try {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        const { data: allOrders } = await sbSync.supabase.from('orders').select('*').order('created_at', { ascending: false });
+        const { data: allBookings } = await sbSync.supabase.from('bookings').select('*').order('created_at', { ascending: false });
+        const { data: allCustomers } = await sbSync.supabase.from('customers').select('phone, name, created_at');
+
+        const orders = allOrders || [];
+        const bookings = allBookings || [];
+        const customers = allCustomers || [];
+
+        const paidOrders = orders.filter(o => ['Paid', 'Dispatched', 'Delivered'].includes(o.status));
+        const totalRevenue = paidOrders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+        const bookingRevenue = bookings.filter(b => b.price > 0).reduce((s, b) => s + parseFloat(b.price || 0), 0);
+
+        // Revenue by day (last 30 days)
+        const revenueByDay = {};
+        paidOrders.filter(o => o.created_at >= thirtyDaysAgo).forEach(o => {
+            const day = o.created_at.substring(0, 10);
+            revenueByDay[day] = (revenueByDay[day] || 0) + parseFloat(o.total || 0);
+        });
+
+        // Top 5 products
+        const productCounts = {};
+        orders.forEach(o => {
+            if (!Array.isArray(o.items)) return;
+            o.items.forEach(i => {
+                const key = i.name || 'Unknown';
+                productCounts[key] = (productCounts[key] || 0) + (i.qty || 1);
+            });
+        });
+        const topProducts = Object.entries(productCounts)
+            .sort((a, b) => b[1] - a[1]).slice(0, 5)
+            .map(([name, count]) => ({ name, count }));
+
+        const avgOrder = paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0;
+        const newCustomersThisWeek = customers.filter(c => c.created_at >= sevenDaysAgo).length;
+
+        return res.status(200).json({
+            success: true,
+            analytics: {
+                totalRevenue: totalRevenue + bookingRevenue,
+                orderRevenue: totalRevenue,
+                bookingRevenue,
+                totalOrders: orders.length,
+                totalBookings: bookings.length,
+                totalCustomers: customers.length,
+                avgOrderValue: Math.round(avgOrder),
+                newCustomersThisWeek,
+                topProducts,
+                revenueByDay,
+                paidOrderCount: paidOrders.length,
+            }
+        });
+    } catch (err) {
+        console.error('Analytics error:', err.message);
+        return res.status(500).json({ success: false, message: 'Could not generate analytics.' });
+    }
+});
+
+// ── ABANDONED CART: Save cart (logged-in customers) ───────
+app.post('/api/cart/save', verifyCustomerToken, async (req, res) => {
+    const { items, total } = req.body;
+    if (!sbSync.supabase || !items) return res.status(200).json({ success: true });
+
+    const customers = readCustomers();
+    const customer = customers.find(c => c.phone === req.customerPhone);
+    try {
+        await sbSync.supabase.from('saved_carts').upsert({
+            phone: req.customerPhone,
+            customer_name: customer?.name || 'Customer',
+            items, total: parseFloat(total || 0),
+            last_updated: new Date().toISOString(),
+            reminder_sent: false
+        }, { onConflict: 'phone' });
+    } catch { /* silent */ }
+    return res.status(200).json({ success: true });
+});
+
+// ── ABANDONED CART: Clear cart (after successful checkout) ──
+app.post('/api/cart/clear', verifyCustomerToken, async (req, res) => {
+    if (!sbSync.supabase) return res.status(200).json({ success: true });
+    try { await sbSync.supabase.from('saved_carts').delete().eq('phone', req.customerPhone); } catch { /* ignore */ }
+    return res.status(200).json({ success: true });
+});
+
+// ── ABANDONED CART: Recovery check (runs periodically) ────
+async function checkAbandonedCarts() {
+    if (!sbSync.supabase || !WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return;
+    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    try {
+        const { data: carts } = await sbSync.supabase
+            .from('saved_carts').select('*')
+            .eq('reminder_sent', false)
+            .lt('last_updated', cutoff);
+        if (!carts || carts.length === 0) return;
+
+        const siteUrl = ALLOWED_ORIGIN !== '*' ? ALLOWED_ORIGIN.split(',')[0] : 'https://bodhisatvvam.onrender.com';
+        for (const cart of carts) {
+            if (!Array.isArray(cart.items) || cart.items.length === 0) continue;
+            const itemList = cart.items.map(i => `${i.emoji || '🌿'} ${i.name} × ${i.qty || 1} — ₹${i.price}`).join('\n');
+            const msg = `*Namaste ${(cart.customer_name || '').split(' ')[0]},* 🙏\n\n` +
+                `Your healing cart is waiting for you ✨\n\n` +
+                `${itemList}\n─────────────────\n*Total: ₹${parseFloat(cart.total).toFixed(2)}*\n\n` +
+                `Complete your order 👉 ${siteUrl}\n\n_Shree Bodhisatvvam_ 🌸`;
+            try {
+                await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+                    { messaging_product: 'whatsapp', to: '+' + cart.phone, type: 'text', text: { body: msg } },
+                    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+                );
+                await sbSync.supabase.from('saved_carts').update({ reminder_sent: true }).eq('phone', cart.phone);
+                console.log(`📱 Abandoned cart reminder sent → ${cart.customer_name} (${cart.phone})`);
+            } catch (e) { console.warn(`Cart reminder failed for ${cart.phone}:`, e.message); }
+        }
+    } catch (e) { console.error('Abandoned cart check error:', e.message); }
+}
+
+// -- 10. START ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
@@ -1208,4 +1543,8 @@ app.listen(PORT, '0.0.0.0', async () => {
     if (sbSync.isConfigured) {
         await sbSync.pullFromSupabase();
     }
+
+    // Check for abandoned carts every 30 minutes
+    setInterval(checkAbandonedCarts, 30 * 60 * 1000);
+    console.log(`   Cart Check: ✅ every 30 min`);
 });

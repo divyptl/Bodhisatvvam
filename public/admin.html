@@ -198,6 +198,43 @@
   .table-message-icon { font-size: 3rem; display: block; margin-bottom: 16px; }
 
   /* Loading overlay */
+
+  /* Analytics */
+  .analytics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 24px 40px; }
+  .analytics-card { background: white; padding: 24px; border: 1px solid var(--cream-dark); }
+  .analytics-card-label { font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-light); margin-bottom: 6px; }
+  .analytics-card-value { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--forest); }
+  .analytics-card-sub { font-size: 0.75rem; color: var(--text-light); margin-top: 4px; }
+  .analytics-section { padding: 0 40px 32px; }
+  .analytics-section-title { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: var(--forest); margin-bottom: 16px; }
+  .chart-container { background: white; padding: 24px; border: 1px solid var(--cream-dark); height: 260px; position: relative; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 200px; padding-top: 10px; }
+  .chart-bar { flex: 1; background: var(--sage); min-width: 8px; border-radius: 2px 2px 0 0; transition: height 0.4s ease, background 0.2s; cursor: pointer; position: relative; }
+  .chart-bar:hover { background: var(--forest); }
+  .chart-bar-tooltip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--forest); color: var(--cream); padding: 4px 10px; font-size: 0.7rem; white-space: nowrap; pointer-events: none; margin-bottom: 4px; }
+  .chart-bar:hover .chart-bar-tooltip { display: block; }
+  .top-products-list { background: white; border: 1px solid var(--cream-dark); }
+  .top-product-row { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--cream-dark); }
+  .top-product-row:last-child { border-bottom: none; }
+  .top-product-rank { width: 28px; height: 28px; background: var(--forest); color: var(--cream); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; margin-right: 16px; flex-shrink: 0; }
+  .top-product-name { flex: 1; font-size: 0.9rem; color: var(--text-mid); }
+  .top-product-count { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: var(--forest); font-weight: 500; }
+  .analytics-cols { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+  @media (max-width: 768px) { .analytics-grid { grid-template-columns: 1fr 1fr; } .analytics-cols { grid-template-columns: 1fr; } }
+
+  /* Reviews Management */
+  .review-mgmt-card { background: white; border: 1px solid var(--cream-dark); padding: 20px; margin-bottom: 12px; display: flex; gap: 16px; align-items: flex-start; }
+  .review-stars { color: var(--gold); font-size: 1rem; }
+  .review-mgmt-body { flex: 1; }
+  .review-mgmt-product { font-weight: 600; color: var(--forest); font-size: 0.9rem; }
+  .review-mgmt-comment { color: var(--text-mid); font-size: 0.85rem; margin: 6px 0; line-height: 1.5; }
+  .review-mgmt-meta { font-size: 0.72rem; color: var(--text-light); }
+  .review-mgmt-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .review-mgmt-actions button { padding: 6px 16px; border: none; font-family: 'Jost',sans-serif; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .approve-btn { background: rgba(45,106,79,0.12); color: #2d6a4f; }
+  .approve-btn:hover { background: rgba(45,106,79,0.25); }
+  .reject-btn { background: rgba(184,92,56,0.1); color: var(--danger); }
+  .reject-btn:hover { background: rgba(184,92,56,0.2); }
   .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(245,239,227,0.7); backdrop-filter: blur(4px); z-index: 500; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
   .loading-overlay.active { display: flex; }
   .spinner { width: 40px; height: 40px; border: 3px solid var(--cream-dark); border-top-color: var(--amber); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -255,6 +292,8 @@
   <div class="admin-tabs">
     <button class="admin-tab active" id="tab-orders" onclick="switchTab('orders')">🛍️ Orders</button>
     <button class="admin-tab" id="tab-bookings" onclick="switchTab('bookings')">🌿 Sessions</button>
+    <button class="admin-tab" id="tab-analytics" onclick="switchTab('analytics')">📊 Analytics</button>
+    <button class="admin-tab" id="tab-reviews" onclick="switchTab('reviews')">⭐ Reviews</button>
     <a href="/admin-products.html" class="admin-tab" style="text-decoration:none;color:inherit;">📦 Products</a>
     <a href="/admin-categories.html" class="admin-tab" style="text-decoration:none;color:inherit;">📂 Categories</a>
     <a href="/admin-content.html" class="admin-tab" style="text-decoration:none;color:inherit;">🌐 Website Content</a>
@@ -318,6 +357,31 @@
     </table>
   </div>
 
+  <!-- ANALYTICS PANEL -->
+  <div id="analyticsWrap" style="display:none;">
+    <div class="analytics-grid" id="analyticsCards"></div>
+    <div class="analytics-section">
+      <div class="analytics-cols">
+        <div>
+          <div class="analytics-section-title">Revenue — Last 30 Days</div>
+          <div class="chart-container"><div class="chart-bars" id="revenueChart"></div></div>
+        </div>
+        <div>
+          <div class="analytics-section-title">Top Products</div>
+          <div class="top-products-list" id="topProductsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEWS PANEL -->
+  <div class="table-wrap" id="reviewsWrap" style="display:none;">
+    <div style="padding:0 0 16px; display:flex; justify-content:space-between; align-items:center;">
+      <span class="orders-count" id="reviewsCount"></span>
+    </div>
+    <div id="reviewsList"></div>
+  </div>
+
 </div>
 
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div class="loading-text">Syncing data...</div></div>
@@ -374,14 +438,15 @@ function switchTab(tab) {
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
 
-  if (tab === 'orders') {
-    document.getElementById('ordersWrap').style.display = 'block';
-    document.getElementById('bookingsWrap').style.display = 'none';
-  } else {
-    document.getElementById('ordersWrap').style.display = 'none';
-    document.getElementById('bookingsWrap').style.display = 'block';
-  }
-  filterData();
+  document.getElementById('ordersWrap').style.display = tab === 'orders' ? 'block' : 'none';
+  document.getElementById('bookingsWrap').style.display = tab === 'bookings' ? 'block' : 'none';
+  document.getElementById('analyticsWrap').style.display = tab === 'analytics' ? 'block' : 'none';
+  document.getElementById('reviewsWrap').style.display = tab === 'reviews' ? 'block' : 'none';
+  document.querySelector('.controls-bar').style.display = (tab === 'orders' || tab === 'bookings') ? 'flex' : 'none';
+
+  if (tab === 'analytics') loadAnalytics();
+  if (tab === 'reviews') loadReviews();
+  if (tab === 'orders' || tab === 'bookings') filterData();
 }
 
 // ── LOAD ALL DATA ─────────────────────────────────────────
@@ -619,6 +684,128 @@ function showToast(msg) {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 400);
   }, 3000);
+}
+// ── ANALYTICS ─────────────────────────────────────────────
+async function loadAnalytics() {
+  const token = sessionStorage.getItem('bdh_token') || '';
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/analytics`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (!data.success) return;
+    renderAnalytics(data.analytics);
+  } catch (e) { console.error('Analytics load error:', e); }
+}
+
+function renderAnalytics(a) {
+  // KPI Cards
+  document.getElementById('analyticsCards').innerHTML = `
+    <div class="analytics-card">
+      <div class="analytics-card-label">Total Revenue</div>
+      <div class="analytics-card-value">₹${Math.round(a.totalRevenue).toLocaleString('en-IN')}</div>
+      <div class="analytics-card-sub">Orders: ₹${Math.round(a.orderRevenue).toLocaleString('en-IN')} · Sessions: ₹${Math.round(a.bookingRevenue).toLocaleString('en-IN')}</div>
+    </div>
+    <div class="analytics-card">
+      <div class="analytics-card-label">Average Order</div>
+      <div class="analytics-card-value">₹${a.avgOrderValue.toLocaleString('en-IN')}</div>
+      <div class="analytics-card-sub">${a.paidOrderCount} paid orders</div>
+    </div>
+    <div class="analytics-card">
+      <div class="analytics-card-label">Customers</div>
+      <div class="analytics-card-value">${a.totalCustomers}</div>
+      <div class="analytics-card-sub">+${a.newCustomersThisWeek} this week</div>
+    </div>
+    <div class="analytics-card">
+      <div class="analytics-card-label">Transactions</div>
+      <div class="analytics-card-value">${a.totalOrders + a.totalBookings}</div>
+      <div class="analytics-card-sub">${a.totalOrders} orders · ${a.totalBookings} bookings</div>
+    </div>
+  `;
+
+  // Revenue Chart (last 30 days)
+  const chart = document.getElementById('revenueChart');
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    days.push(d.toISOString().substring(0, 10));
+  }
+  const values = days.map(d => a.revenueByDay[d] || 0);
+  const maxVal = Math.max(...values, 1);
+  chart.innerHTML = values.map((v, i) => {
+    const h = Math.max((v / maxVal) * 190, v > 0 ? 4 : 1);
+    const dayLabel = new Date(days[i]).toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+    return `<div class="chart-bar" style="height:${h}px"><div class="chart-bar-tooltip">${dayLabel}: ₹${Math.round(v).toLocaleString('en-IN')}</div></div>`;
+  }).join('');
+
+  // Top Products
+  const topList = document.getElementById('topProductsList');
+  if (!a.topProducts || a.topProducts.length === 0) {
+    topList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-light);">No sales data yet.</div>';
+  } else {
+    topList.innerHTML = a.topProducts.map((p, i) =>
+      `<div class="top-product-row"><div class="top-product-rank">${i + 1}</div><div class="top-product-name">${p.name}</div><div class="top-product-count">${p.count} sold</div></div>`
+    ).join('');
+  }
+}
+
+// ── REVIEWS MANAGEMENT ────────────────────────────────────
+async function loadReviews() {
+  const token = sessionStorage.getItem('bdh_token') || '';
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/reviews`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (!data.success) return;
+    renderReviewsMgmt(data.reviews || []);
+  } catch (e) { console.error('Reviews load error:', e); }
+}
+
+function renderReviewsMgmt(reviews) {
+  const container = document.getElementById('reviewsList');
+  document.getElementById('reviewsCount').textContent = `${reviews.length} review${reviews.length !== 1 ? 's' : ''} submitted`;
+
+  if (reviews.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-light);">No reviews submitted yet.</div>';
+    return;
+  }
+
+  container.innerHTML = reviews.map(r => {
+    const stars = '⭐'.repeat(r.rating);
+    const date = new Date(r.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+    const statusLabel = r.approved ? '<span style="color:#2d6a4f;font-weight:600;">✓ Approved</span>' : '<span style="color:var(--amber);">Pending</span>';
+    return `
+      <div class="review-mgmt-card" id="review-${r.id}">
+        <div class="review-mgmt-body">
+          <div class="review-mgmt-product">Product #${r.product_id} — ${r.customer_name} <span class="review-stars">${stars}</span></div>
+          <div class="review-mgmt-comment">"${r.comment || '(no comment)'}"</div>
+          <div class="review-mgmt-meta">Order: ${r.order_id || '—'} · ${date} · ${statusLabel}</div>
+        </div>
+        <div class="review-mgmt-actions">
+          ${!r.approved ? `<button class="approve-btn" onclick="approveReview(${r.id}, true)">✓ Approve</button>` : ''}
+          ${r.approved ? `<button class="reject-btn" onclick="approveReview(${r.id}, false)">✕ Unapprove</button>` : `<button class="reject-btn" onclick="approveReview(${r.id}, false)">✕ Reject</button>`}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function approveReview(reviewId, approved) {
+  const token = sessionStorage.getItem('bdh_token') || '';
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/reviews/approve`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, reviewId, approved })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(approved ? '✅ Review approved' : '❌ Review rejected');
+      loadReviews();
+    }
+  } catch { showToast('❌ Could not update review'); }
 }
 </script>
 </body>

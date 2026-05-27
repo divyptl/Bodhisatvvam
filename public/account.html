@@ -228,6 +228,30 @@
     margin-bottom: 15px;
     font-size: 0.9rem;
   }
+
+  /* ── JOURNAL ── */
+  .journal-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--cream-dark); padding-bottom: 12px; }
+  .journal-tab { background: none; border: none; padding: 8px 20px; font-family: 'Jost',sans-serif; font-size: 0.85rem; cursor: pointer; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .journal-tab.active { color: var(--forest); border-bottom-color: var(--forest); }
+  .journal-compose { background: white; border: 1px solid var(--cream-dark); padding: 24px; margin-bottom: 24px; display: none; }
+  .journal-compose.open { display: block; }
+  .journal-compose input, .journal-compose textarea { width: 100%; padding: 12px; border: 1px solid var(--cream-dark); font-family: 'Jost',sans-serif; font-size: 0.9rem; outline: none; margin-bottom: 12px; background: var(--cream); }
+  .journal-compose textarea { min-height: 120px; resize: vertical; }
+  .mood-picker { display: flex; gap: 8px; margin-bottom: 16px; }
+  .mood-picker button { background: none; border: 2px solid transparent; font-size: 1.5rem; padding: 4px 8px; cursor: pointer; border-radius: 8px; transition: all 0.15s; opacity: 0.5; }
+  .mood-picker button.selected { border-color: var(--forest); opacity: 1; transform: scale(1.15); }
+  .journal-entry { background: white; border: 1px solid var(--cream-dark); padding: 20px; margin-bottom: 12px; position: relative; }
+  .journal-entry-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .journal-entry-title { font-weight: 600; color: var(--forest); font-size: 1rem; }
+  .journal-entry-meta { font-size: 0.75rem; color: var(--text-light); }
+  .journal-entry-content { color: var(--text-mid); font-size: 0.9rem; line-height: 1.7; white-space: pre-wrap; }
+  .journal-entry-footer { display: flex; gap: 12px; align-items: center; margin-top: 10px; }
+  .journal-entry-mood { font-size: 1.2rem; }
+  .journal-entry-moon { font-size: 0.75rem; color: var(--text-light); }
+  .journal-delete { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--text-light); cursor: pointer; font-size: 0.8rem; opacity: 0; transition: opacity 0.2s; }
+  .journal-entry:hover .journal-delete { opacity: 1; }
+  .new-entry-btn { background: var(--forest); color: var(--cream); border: none; padding: 10px 24px; font-family: 'Jost',sans-serif; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+  .new-entry-btn:hover { background: var(--forest-light); }
 </style>
 </head>
 <body>
@@ -329,6 +353,35 @@
         <h3>✨ Healing Sessions</h3>
         <div id="bookingsList">
           <div class="empty-state">Loading your sessions...</div>
+        </div>
+      </div>
+
+      <!-- HEALING JOURNAL -->
+      <div class="history-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3>🌿 Healing Journal</h3>
+          <button class="new-entry-btn" onclick="toggleCompose()">+ New Entry</button>
+        </div>
+
+        <div class="journal-compose" id="journalCompose">
+          <input type="text" id="journalTitle" placeholder="Entry title (optional)" maxlength="200">
+          <div style="font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-light); margin-bottom:8px;">How are you feeling?</div>
+          <div class="mood-picker" id="moodPicker">
+            <button onclick="pickMood('😊')" title="Happy">😊</button>
+            <button onclick="pickMood('🙏')" title="Grateful">🙏</button>
+            <button onclick="pickMood('😌')" title="Peaceful">😌</button>
+            <button onclick="pickMood('💪')" title="Strong">💪</button>
+            <button onclick="pickMood('🌿')" title="Balanced">🌿</button>
+            <button onclick="pickMood('😢')" title="Sad">😢</button>
+            <button onclick="pickMood('😤')" title="Frustrated">😤</button>
+            <button onclick="pickMood('🌙')" title="Reflective">🌙</button>
+          </div>
+          <textarea id="journalContent" placeholder="Write your thoughts, intentions, or reflections..." maxlength="5000"></textarea>
+          <button class="btn-primary" onclick="submitJournalEntry()" id="journalSubmitBtn">Save Entry</button>
+        </div>
+
+        <div id="journalList">
+          <div class="empty-state">Loading your journal...</div>
         </div>
       </div>
     </div>
@@ -450,6 +503,7 @@
       
       renderOrders(data.orders || []);
       renderBookings(data.bookings || []);
+      fetchJournal(); // Load journal entries
       
     } catch (e) {
       document.getElementById('ordersList').innerHTML = '<div class="empty-state">Failed to load history.</div>';
@@ -522,6 +576,99 @@
 
   // Initialize
   checkAuth();
+
+  // ── JOURNAL FUNCTIONS ──
+  let selectedMood = '🌿';
+
+  function toggleCompose() {
+    const el = document.getElementById('journalCompose');
+    el.classList.toggle('open');
+    if (el.classList.contains('open')) document.getElementById('journalContent').focus();
+  }
+
+  function pickMood(emoji) {
+    selectedMood = emoji;
+    document.querySelectorAll('#moodPicker button').forEach(b => {
+      b.classList.toggle('selected', b.textContent.trim() === emoji);
+    });
+  }
+
+  async function fetchJournal() {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch('/api/journal', { headers: { 'Authorization': 'Bearer ' + token } });
+      const data = await res.json();
+      if (data.success) renderJournal(data.entries || []);
+      else document.getElementById('journalList').innerHTML = '<div class="empty-state">Could not load journal.</div>';
+    } catch {
+      document.getElementById('journalList').innerHTML = '<div class="empty-state">Could not load journal.</div>';
+    }
+  }
+
+  function renderJournal(entries) {
+    const list = document.getElementById('journalList');
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="empty-state">Your journal is empty. Start writing your first entry! ✨</div>';
+      return;
+    }
+    list.innerHTML = entries.map(e => {
+      const d = new Date(e.created_at);
+      const dateStr = d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+      return `
+        <div class="journal-entry">
+          <button class="journal-delete" onclick="deleteJournalEntry(${e.id})">✕ delete</button>
+          <div class="journal-entry-header">
+            <div class="journal-entry-title">${e.title || 'Untitled'}</div>
+            <div class="journal-entry-meta">${dateStr}</div>
+          </div>
+          <div class="journal-entry-content">${e.content}</div>
+          <div class="journal-entry-footer">
+            <span class="journal-entry-mood">${e.mood_emoji || '🌿'}</span>
+            <span class="journal-entry-moon">${e.moon_phase || ''}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function submitJournalEntry() {
+    const title = document.getElementById('journalTitle').value.trim();
+    const content = document.getElementById('journalContent').value.trim();
+    if (!content) { alert('Please write something.'); return; }
+
+    const btn = document.getElementById('journalSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      const res = await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+        body: JSON.stringify({ title, content, mood: selectedMood })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('journalTitle').value = '';
+        document.getElementById('journalContent').value = '';
+        document.getElementById('journalCompose').classList.remove('open');
+        selectedMood = '🌿';
+        document.querySelectorAll('#moodPicker button').forEach(b => b.classList.remove('selected'));
+        fetchJournal();
+      } else { alert(data.message || 'Could not save.'); }
+    } catch { alert('Network error.'); }
+    finally { btn.disabled = false; btn.textContent = 'Save Entry'; }
+  }
+
+  async function deleteJournalEntry(id) {
+    if (!confirm('Delete this journal entry?')) return;
+    try {
+      await fetch('/api/journal/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+        body: JSON.stringify({ entryId: id })
+      });
+      fetchJournal();
+    } catch { /* ignore */ }
+  }
 </script>
 
 </body>

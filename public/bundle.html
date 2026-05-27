@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build Your Healing Bundle — Bodhisatvvam</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --forest: #1c3a28; --forest-light: #2d5a3d; --sage: #7a9e7e;
+    --cream: #f5efe3; --cream-dark: #ede4d2; --amber: #c47c3a;
+    --gold: #d4aa60; --text-dark: #1a2820; --text-mid: #3d5047; --text-light: #7a9080;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--text-dark); min-height: 100vh; }
+
+  .top-bar { background: var(--forest); padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .top-bar a { color: var(--cream); text-decoration: none; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; transition: opacity 0.2s; }
+  .top-bar a:hover { opacity: 1; }
+  .top-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: var(--cream); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; }
+  .top-logo span { color: var(--gold); font-style: italic; }
+
+  .hero-banner {
+    background: var(--forest); color: var(--cream); text-align: center; padding: 60px 24px 48px;
+    position: relative; overflow: hidden;
+  }
+  .hero-banner::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(124,158,126,0.2) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 30%, rgba(196,124,58,0.15) 0%, transparent 50%);
+  }
+  .hero-banner > * { position: relative; z-index: 1; }
+  .bundle-tag { font-size: 0.72rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+  .bundle-title { font-family: 'Cormorant Garamond', serif; font-size: 2.8rem; font-weight: 300; margin-bottom: 12px; }
+  .bundle-title em { color: var(--gold); font-style: italic; }
+  .bundle-sub { font-size: 0.95rem; color: var(--sage); max-width: 500px; margin: 0 auto; line-height: 1.7; }
+  .discount-badge {
+    display: inline-block; margin-top: 20px; padding: 8px 24px;
+    background: rgba(212,170,96,0.15); border: 1px solid rgba(212,170,96,0.3);
+    font-size: 0.82rem; letter-spacing: 0.1em; color: var(--gold); font-weight: 500;
+  }
+
+  .main { max-width: 1000px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  /* Steps */
+  .step-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 24px; margin-top: 40px;
+  }
+  .step-number {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--forest); color: var(--cream);
+    display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 600; flex-shrink: 0;
+  }
+  .step-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--forest); }
+  .step-subtitle { font-size: 0.82rem; color: var(--text-light); margin-left: 52px; margin-bottom: 24px; }
+
+  /* Product Grid */
+  .pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .pick-card {
+    background: white; border: 2px solid var(--cream-dark); padding: 20px; text-align: center;
+    cursor: pointer; transition: all 0.25s; position: relative;
+  }
+  .pick-card:hover { border-color: var(--sage); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(28,58,40,0.08); }
+  .pick-card.selected { border-color: var(--forest); background: rgba(28,58,40,0.03); }
+  .pick-card.selected::after {
+    content: '✓'; position: absolute; top: 8px; right: 8px; width: 24px; height: 24px;
+    background: var(--forest); color: white; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 0.75rem; font-weight: 700;
+  }
+  .pick-card.disabled { opacity: 0.4; pointer-events: none; }
+  .pick-emoji { font-size: 2.2rem; margin-bottom: 8px; display: block; }
+  .pick-name { font-size: 0.9rem; font-weight: 500; color: var(--text-dark); margin-bottom: 4px; }
+  .pick-price { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: var(--gold); }
+  .pick-desc { font-size: 0.75rem; color: var(--text-light); margin-top: 6px; line-height: 1.4; }
+
+  /* Summary */
+  .summary-card {
+    background: white; border: 1px solid var(--cream-dark); padding: 32px;
+    margin-top: 48px; box-shadow: 0 4px 30px rgba(28,58,40,0.06);
+  }
+  .summary-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--forest); margin-bottom: 24px; }
+  .summary-items { margin-bottom: 24px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--cream-dark); font-size: 0.9rem; color: var(--text-mid); }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-original { text-decoration: line-through; color: var(--text-light); margin-right: 8px; }
+  .summary-discount { color: #2d6a4f; font-weight: 500; }
+  .summary-total {
+    display: flex; justify-content: space-between; padding: 16px 0 0; margin-top: 8px;
+    border-top: 2px solid var(--forest); font-size: 1.2rem; font-weight: 600; color: var(--forest);
+    font-family: 'Cormorant Garamond', serif; font-size: 1.4rem;
+  }
+  .summary-savings { text-align: center; padding: 12px; background: rgba(45,106,79,0.08); color: #2d6a4f; font-size: 0.85rem; font-weight: 500; margin-top: 16px; }
+  .add-bundle-btn {
+    width: 100%; padding: 18px; background: var(--forest); color: var(--cream);
+    border: none; font-family: 'Jost', sans-serif; font-size: 0.9rem;
+    letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500;
+    cursor: pointer; transition: background 0.2s; margin-top: 20px;
+  }
+  .add-bundle-btn:hover { background: var(--forest-light); }
+  .add-bundle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .empty-msg { text-align: center; padding: 32px; color: var(--text-light); font-size: 0.9rem; }
+
+  @media (max-width: 600px) {
+    .bundle-title { font-size: 2rem; }
+    .pick-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .pick-card { padding: 14px; }
+    .summary-card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a class="top-logo" href="/">Bodhi<span>satvvam</span></a>
+  <a href="/">← Back to Shop</a>
+</div>
+
+<div class="hero-banner">
+  <div class="bundle-tag">✨ Exclusive Offer</div>
+  <h1 class="bundle-title">Build Your <em>Healing Bundle</em></h1>
+  <p class="bundle-sub">Pick 3 Energy Salts + 1 Infused Candle and enjoy a special bundle discount. Curate your own personalised healing kit.</p>
+  <div class="discount-badge" id="discountBadge">🎁 10% OFF when you complete your bundle</div>
+</div>
+
+<div class="main">
+  <div class="step-header" style="margin-top:0;">
+    <div class="step-number">1</div>
+    <div class="step-title">Choose 3 Energy Salts</div>
+  </div>
+  <div class="step-subtitle">Select any 3 salts for your healing bundle (<span id="saltCount">0</span>/3 selected)</div>
+  <div class="pick-grid" id="saltsGrid">
+    <div class="empty-msg">Loading products...</div>
+  </div>
+
+  <div class="step-header">
+    <div class="step-number">2</div>
+    <div class="step-title">Choose 1 Infused Candle</div>
+  </div>
+  <div class="step-subtitle">Pick a candle to complete your bundle (<span id="candleCount">0</span>/1 selected)</div>
+  <div class="pick-grid" id="candlesGrid">
+    <div class="empty-msg">Loading products...</div>
+  </div>
+
+  <div class="summary-card" id="summaryCard">
+    <div class="summary-title">🌿 Your Healing Bundle</div>
+    <div class="summary-items" id="summaryItems">
+      <div class="empty-msg">Select 3 salts and 1 candle above to see your bundle summary.</div>
+    </div>
+    <div id="summaryFooter" style="display:none;">
+      <div class="summary-total">
+        <span>Bundle Total</span>
+        <span><span class="summary-original" id="originalTotal"></span> <span id="discountTotal"></span></span>
+      </div>
+      <div class="summary-savings" id="savingsMsg"></div>
+      <button class="add-bundle-btn" id="addBundleBtn" onclick="addBundleToCart()">🌿 Add Bundle to Cart</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+let allProducts = [];
+let selectedSalts = [];
+let selectedCandle = null;
+let DISCOUNT = 0.10; // 10% off by default
+
+async function init() {
+  try {
+    const [prodRes, contentRes] = await Promise.all([
+      fetch(`${API_BASE}/api/products`),
+      fetch(`${API_BASE}/api/site-content`)
+    ]);
+    const prodData = await prodRes.json();
+    const contentData = await contentRes.json();
+    
+    allProducts = prodData.products || [];
+    
+    if (contentData.success && contentData.content && contentData.content.bundle) {
+       const pct = contentData.content.bundle.discountPercentage;
+       if (pct) {
+         DISCOUNT = pct / 100;
+         document.getElementById('discountBadge').textContent = `🎁 ${pct}% OFF when you complete your bundle`;
+       }
+    }
+    
+    renderGrids();
+  } catch (e) {
+    document.getElementById('saltsGrid').innerHTML = '<div class="empty-msg">Could not load products.</div>';
+  }
+}
+
+function renderGrids() {
+  const salts = allProducts.filter(p => p.category === 'salts' && p.id !== 1000);
+  const candles = allProducts.filter(p => p.category === 'candles' && p.id !== 1000);
+
+  document.getElementById('saltsGrid').innerHTML = salts.map(p => `
+    <div class="pick-card" id="salt-${p.id}" onclick="toggleSalt(${p.id})">
+      <span class="pick-emoji">${p.emoji}</span>
+      <div class="pick-name">${p.name}</div>
+      <div class="pick-price">₹${p.price}</div>
+      <div class="pick-desc">${p.desc}</div>
+    </div>
+  `).join('') || '<div class="empty-msg">No salts available.</div>';
+
+  document.getElementById('candlesGrid').innerHTML = candles.map(p => `
+    <div class="pick-card" id="candle-${p.id}" onclick="toggleCandle(${p.id})">
+      <span class="pick-emoji">${p.emoji}</span>
+      <div class="pick-name">${p.name}</div>
+      <div class="pick-price">₹${p.price}</div>
+      <div class="pick-desc">${p.desc}</div>
+    </div>
+  `).join('') || '<div class="empty-msg">No candles available.</div>';
+}
+
+function toggleSalt(id) {
+  const idx = selectedSalts.indexOf(id);
+  if (idx !== -1) {
+    selectedSalts.splice(idx, 1);
+    document.getElementById('salt-' + id).classList.remove('selected');
+  } else {
+    if (selectedSalts.length >= 3) return; // Max 3
+    selectedSalts.push(id);
+    document.getElementById('salt-' + id).classList.add('selected');
+  }
+  // Disable unselected if 3 are picked
+  document.querySelectorAll('#saltsGrid .pick-card').forEach(card => {
+    const cid = parseInt(card.id.split('-')[1]);
+    card.classList.toggle('disabled', selectedSalts.length >= 3 && !selectedSalts.includes(cid));
+  });
+  document.getElementById('saltCount').textContent = selectedSalts.length;
+  updateSummary();
+}
+
+function toggleCandle(id) {
+  if (selectedCandle === id) {
+    selectedCandle = null;
+    document.getElementById('candle-' + id).classList.remove('selected');
+  } else {
+    if (selectedCandle) document.getElementById('candle-' + selectedCandle).classList.remove('selected');
+    selectedCandle = id;
+    document.getElementById('candle-' + id).classList.add('selected');
+  }
+  document.getElementById('candleCount').textContent = selectedCandle ? 1 : 0;
+  updateSummary();
+}
+
+function updateSummary() {
+  const items = [...selectedSalts.map(id => allProducts.find(p => p.id === id)), selectedCandle ? allProducts.find(p => p.id === selectedCandle) : null].filter(Boolean);
+  const isComplete = selectedSalts.length === 3 && selectedCandle;
+
+  if (items.length === 0) {
+    document.getElementById('summaryItems').innerHTML = '<div class="empty-msg">Select 3 salts and 1 candle above to see your bundle summary.</div>';
+    document.getElementById('summaryFooter').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('summaryItems').innerHTML = items.map(p =>
+    `<div class="summary-row"><span>${p.emoji} ${p.name}</span><span>₹${p.price.toFixed(2)}</span></div>`
+  ).join('');
+
+  if (isComplete) {
+    const subtotal = items.reduce((s, p) => s + p.price, 0);
+    const savings = Math.round(subtotal * DISCOUNT);
+    const total = subtotal - savings;
+    document.getElementById('originalTotal').textContent = '₹' + subtotal.toFixed(2);
+    document.getElementById('discountTotal').textContent = '₹' + total.toFixed(2);
+    document.getElementById('savingsMsg').textContent = `🎉 You save ₹${savings.toFixed(2)} with this bundle!`;
+    document.getElementById('summaryFooter').style.display = 'block';
+    document.getElementById('addBundleBtn').disabled = false;
+  } else {
+    document.getElementById('summaryFooter').style.display = 'none';
+  }
+}
+
+function addBundleToCart() {
+  const items = [...selectedSalts.map(id => allProducts.find(p => p.id === id)), allProducts.find(p => p.id === selectedCandle)].filter(Boolean);
+  // Store bundle in sessionStorage and redirect to main page
+  const bundleData = {
+    items: items.map(p => ({ id: p.id, name: p.name, emoji: p.emoji, price: p.price, category: p.category })),
+    discount: DISCOUNT
+  };
+  sessionStorage.setItem('bodhi_bundle', JSON.stringify(bundleData));
+  window.location.href = '/?bundle=1';
+}
+
+init();
+</script>
+</body>
+</html>

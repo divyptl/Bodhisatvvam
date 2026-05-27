@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Your Order — Bodhisatvvam</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --forest: #1c3a28; --forest-light: #2d5a3d; --sage: #7a9e7e;
+    --cream: #f5efe3; --cream-dark: #ede4d2; --amber: #c47c3a;
+    --gold: #d4aa60; --text-dark: #1a2820; --text-mid: #3d5047; --text-light: #7a9080;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--text-dark); min-height: 100vh; }
+
+  .top-bar { background: var(--forest); padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .top-bar a { color: var(--cream); text-decoration: none; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; transition: opacity 0.2s; }
+  .top-bar a:hover { opacity: 1; }
+  .top-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: var(--cream); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; }
+  .top-logo span { color: var(--gold); font-style: italic; }
+
+  .container { max-width: 640px; margin: 60px auto; padding: 0 24px; }
+
+  .page-title {
+    font-family: 'Cormorant Garamond', serif; font-size: 2.8rem; font-weight: 300;
+    color: var(--forest); text-align: center; margin-bottom: 8px;
+  }
+  .page-sub { text-align: center; color: var(--text-light); font-size: 0.9rem; margin-bottom: 48px; }
+
+  /* Search Box */
+  .search-card {
+    background: white; border: 1px solid var(--cream-dark); padding: 40px;
+    box-shadow: 0 4px 30px rgba(28,58,40,0.06);
+  }
+  .field-label {
+    font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--text-mid); font-weight: 500; margin-bottom: 8px; display: block;
+  }
+  .field-input {
+    width: 100%; padding: 14px 16px; border: 1px solid var(--cream-dark);
+    font-family: 'Jost', sans-serif; font-size: 0.95rem; color: var(--text-dark);
+    outline: none; transition: border-color 0.2s; margin-bottom: 20px; background: var(--cream);
+  }
+  .field-input:focus { border-color: var(--forest); }
+  .field-input::placeholder { color: var(--text-light); }
+  .track-btn {
+    width: 100%; padding: 16px; background: var(--forest); color: var(--cream);
+    border: none; font-family: 'Jost', sans-serif; font-size: 0.82rem;
+    letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .track-btn:hover { background: var(--forest-light); }
+  .track-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error-msg { color: #b85c38; font-size: 0.85rem; text-align: center; margin-top: 16px; display: none; }
+
+  /* Result Card */
+  .result-card {
+    background: white; border: 1px solid var(--cream-dark); padding: 40px;
+    margin-top: 32px; display: none; animation: fadeIn 0.5s ease;
+    box-shadow: 0 4px 30px rgba(28,58,40,0.06);
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+  .order-id-display {
+    font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--forest);
+  }
+  .order-date { font-size: 0.82rem; color: var(--text-light); margin-top: 4px; }
+  .status-pill {
+    display: inline-block; padding: 6px 18px; font-size: 0.72rem; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 600; border-radius: 2px;
+  }
+  .status-paid { background: rgba(45,106,79,0.12); color: #2d6a4f; }
+  .status-dispatched { background: rgba(28,58,40,0.1); color: var(--forest); }
+  .status-delivered { background: rgba(45,106,79,0.25); color: #2d6a4f; }
+  .status-cancelled { background: rgba(184,92,56,0.1); color: #b85c38; }
+  .status-new { background: rgba(196,124,58,0.12); color: var(--amber); }
+
+  /* Progress Tracker */
+  .progress-track { display: flex; align-items: flex-start; justify-content: space-between; margin: 32px 0; position: relative; }
+  .progress-track::before {
+    content: ''; position: absolute; top: 18px; left: 24px; right: 24px; height: 2px;
+    background: var(--cream-dark); z-index: 0;
+  }
+  .progress-track::after {
+    content: ''; position: absolute; top: 18px; left: 24px; height: 2px;
+    background: var(--forest); z-index: 1; transition: width 0.6s ease;
+    width: var(--progress, 0%);
+  }
+  .step { text-align: center; position: relative; z-index: 2; flex: 1; }
+  .step-dot {
+    width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; border: 2px solid var(--cream-dark); background: white;
+    transition: all 0.3s;
+  }
+  .step.active .step-dot { border-color: var(--forest); background: var(--forest); color: white; }
+  .step.done .step-dot { border-color: var(--forest); background: var(--forest); color: white; }
+  .step-label { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); }
+  .step.active .step-label, .step.done .step-label { color: var(--forest); font-weight: 500; }
+
+  /* Items List */
+  .items-section { border-top: 1px solid var(--cream-dark); padding-top: 24px; margin-top: 24px; }
+  .items-title { font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-light); margin-bottom: 16px; }
+  .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--cream-dark); font-size: 0.9rem; color: var(--text-mid); }
+  .item-row:last-child { border-bottom: none; }
+  .item-total-row { display: flex; justify-content: space-between; padding: 16px 0 0; font-weight: 600; color: var(--forest); font-size: 1.1rem; font-family: 'Cormorant Garamond', serif; }
+
+  .delivery-info { margin-top: 24px; padding: 16px 20px; background: var(--cream); font-size: 0.85rem; color: var(--text-mid); line-height: 1.6; }
+  .delivery-info strong { color: var(--forest); }
+
+  @media (max-width: 600px) {
+    .container { margin: 32px auto; }
+    .page-title { font-size: 2rem; }
+    .search-card, .result-card { padding: 24px; }
+    .step-label { font-size: 0.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a class="top-logo" href="/">Bodhi<span>satvvam</span></a>
+  <a href="/">← Back to Shop</a>
+</div>
+
+<div class="container">
+  <h1 class="page-title">Track Your Order</h1>
+  <p class="page-sub">Enter your Order ID and phone number to check your order status.</p>
+
+  <div class="search-card">
+    <label class="field-label" for="trackOrderId">Order ID</label>
+    <input type="text" id="trackOrderId" class="field-input" placeholder="e.g. #BDH-XXXXX-1234">
+
+    <label class="field-label" for="trackPhone">Phone Number</label>
+    <input type="tel" id="trackPhone" class="field-input" placeholder="e.g. 9876543210">
+
+    <button class="track-btn" id="trackBtn" onclick="trackOrder()">🔍 Track Order</button>
+    <div class="error-msg" id="trackError"></div>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="order-header">
+      <div>
+        <div class="order-id-display" id="resOrderId"></div>
+        <div class="order-date" id="resDate"></div>
+      </div>
+      <div class="status-pill" id="resStatus"></div>
+    </div>
+
+    <div class="progress-track" id="progressTrack">
+      <div class="step" data-step="1"><div class="step-dot">✓</div><div class="step-label">Received</div></div>
+      <div class="step" data-step="2"><div class="step-dot">💳</div><div class="step-label">Paid</div></div>
+      <div class="step" data-step="3"><div class="step-dot">📦</div><div class="step-label">Dispatched</div></div>
+      <div class="step" data-step="4"><div class="step-dot">🏠</div><div class="step-label">Delivered</div></div>
+    </div>
+
+    <div class="items-section">
+      <div class="items-title">Order Items</div>
+      <div id="resItems"></div>
+      <div class="item-total-row">
+        <span>Total</span>
+        <span id="resTotal"></span>
+      </div>
+    </div>
+
+    <div class="delivery-info" id="resDelivery"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+
+async function trackOrder() {
+  const orderId = document.getElementById('trackOrderId').value.trim();
+  const phone = document.getElementById('trackPhone').value.trim().replace(/\D/g, '');
+  const btn = document.getElementById('trackBtn');
+  const err = document.getElementById('trackError');
+  const card = document.getElementById('resultCard');
+
+  err.style.display = 'none';
+  card.style.display = 'none';
+
+  if (!orderId || !phone || phone.length < 10) {
+    err.textContent = 'Please enter a valid Order ID and 10-digit phone number.';
+    err.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Looking up...';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/track?orderId=${encodeURIComponent(orderId)}&phone=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      err.textContent = data.message || 'Order not found. Please check your Order ID and phone number.';
+      err.style.display = 'block';
+      return;
+    }
+
+    displayResult(data.order);
+  } catch (e) {
+    err.textContent = 'Could not connect to server. Please try again.';
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Track Order';
+  }
+}
+
+function displayResult(order) {
+  const card = document.getElementById('resultCard');
+  document.getElementById('resOrderId').textContent = order.order_id;
+  document.getElementById('resDate').textContent = 'Placed on ' + new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // Status pill
+  const statusEl = document.getElementById('resStatus');
+  const s = (order.status || 'New Order').toLowerCase().replace(/\s/g, '');
+  statusEl.textContent = order.status;
+  statusEl.className = 'status-pill';
+  if (s === 'paid' || s === 'confirmed') statusEl.classList.add('status-paid');
+  else if (s === 'dispatched') statusEl.classList.add('status-dispatched');
+  else if (s === 'delivered') statusEl.classList.add('status-delivered');
+  else if (s === 'cancelled') statusEl.classList.add('status-cancelled');
+  else statusEl.classList.add('status-new');
+
+  // Progress steps
+  const statusMap = { 'new order': 1, 'paid': 2, 'confirmed': 2, 'dispatched': 3, 'delivered': 4, 'cancelled': 0 };
+  const currentStep = statusMap[order.status?.toLowerCase()] || 1;
+  const steps = document.querySelectorAll('.step');
+  const progressPercents = { 0: '0%', 1: '0%', 2: '33%', 3: '66%', 4: '100%' };
+  document.getElementById('progressTrack').style.setProperty('--progress', progressPercents[currentStep]);
+  steps.forEach(step => {
+    const stepNum = parseInt(step.dataset.step);
+    step.classList.remove('active', 'done');
+    if (stepNum < currentStep) step.classList.add('done');
+    else if (stepNum === currentStep) step.classList.add('active');
+  });
+
+  // Items
+  const itemsHtml = (Array.isArray(order.items) ? order.items : []).map(i =>
+    `<div class="item-row"><span>${i.name || 'Item'} × ${i.qty || 1}</span><span>₹${((i.price || 0) * (i.qty || 1)).toFixed(2)}</span></div>`
+  ).join('');
+  document.getElementById('resItems').innerHTML = itemsHtml;
+  document.getElementById('resTotal').textContent = '₹' + parseFloat(order.total || 0).toFixed(2);
+
+  // Delivery
+  document.getElementById('resDelivery').innerHTML =
+    `<strong>Delivery to:</strong> ${order.name}<br>${order.address || 'Address not available'}` +
+    (order.payment_id ? `<br><strong>Payment ID:</strong> ${order.payment_id}` : '');
+
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Allow Enter key to trigger search
+document.getElementById('trackPhone').addEventListener('keydown', e => { if (e.key === 'Enter') trackOrder(); });
+document.getElementById('trackOrderId').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('trackPhone').focus(); });
+</script>
+</body>
+</html>
