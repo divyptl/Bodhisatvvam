@@ -1854,11 +1854,15 @@ function showSuccess(orderId) {
 // Step 2: Open Cashfree checkout modal
 // Step 3: On return → verify payment status on server → log to Sheet + WhatsApp
 
-// Initialize Cashfree JS SDK (sandbox by default; server controls actual env)
-const cashfreeSDK = Cashfree({ mode: 'sandbox' });
+// Initialize Cashfree JS SDK lazily
+let cashfreeSDK = null;
 
 async function placeOrder() {
   if (!validateForm()) return;
+
+  if (!cashfreeSDK) {
+    cashfreeSDK = Cashfree({ mode: 'sandbox' });
+  }
 
   const orderData = collectOrderData();
   setBtn('⏳ Initiating Payment…', true);
@@ -2075,7 +2079,7 @@ function updatePageMeta(filter) {
 }
 
 // ── INIT: load products from server, then wire up search bar ──
-document.addEventListener('DOMContentLoaded', async () => {
+async function initSite() {
   // Load categories, site content, and products in parallel
   await Promise.all([
     loadCategoriesFromServer(),
@@ -2092,7 +2096,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   observeAnimations();
   updateNavGreeting();
   checkBundleImport(); // Check if user came from Bundle Builder
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSite);
+} else {
+  initSite();
+}
 
 // ── LOGGED-IN GREETING & AUTOFILL ──
 function updateNavGreeting() {
