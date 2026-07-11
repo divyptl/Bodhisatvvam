@@ -1630,8 +1630,19 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log(`   Supabase  : ${sbSync.isConfigured ? '✅ configured' : '❌ not set'}`);
     console.log(`   CORS      : ${ALLOWED_ORIGIN}`);
 
-    // Pull latest data from Supabase on startup (fixes ephemeral filesystem issue)
+    // TEMPORARY FIX: Push new compliant data to Supabase to overwrite old db rows!
     if (sbSync.isConfigured) {
+        console.log('🚀 Force pushing local JSON to Supabase to update live DB...');
+        const content = readSiteContent();
+        await sbSync.syncAllSiteContent(content);
+        
+        const products = readProducts();
+        await sbSync.syncBulkProducts(products);
+        
+        const cats = readCategories();
+        await sbSync.syncAllCategories(cats);
+        
+        // After pushing, we resume normal pulling behavior for future restarts
         await sbSync.pullFromSupabase();
     }
 
