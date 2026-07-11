@@ -1,7 +1,7 @@
 {
   "hero": {
     "tag": "Empower Your Wellness & Transform Your Life",
-    "title": "Handcrafted<br><em>wellness,</em><br>for your soul.",
+    "title": "Handcrafted<br><em>wellness,</em><br>for your daily life.",
     "subtitle": "Guided by Neepa Patel — Life Coach, Wellness Expert, and NLP Trainer. We offer handcrafted candles, aromatherapy salts, and one-on-one coaching sessions to revitalize your mental strength and well-being.",
     "ctaPrimary": "Explore Collection",
     "ctaSecondary": "Meet Neepa →",
@@ -13,10 +13,26 @@
     "title": "We believe in wellness and<br>the power to <em>transform.</em>",
     "description": "At Bodhisatvvam, we focus on revitalizing your mental strength, emotional well-being, and physical health. Whether through one-on-one life coaching or our handcrafted wellness products, our goal is to help you overcome fear, anxiety, and negativity.",
     "pillars": [
-      { "icon": "✨", "name": "Holistic Wellness", "desc": "Advanced coaching techniques to clear mental blockages and restore balance." },
-      { "icon": "🧠", "name": "NLP Coaching", "desc": "Neuro Linguistic Programming to rewire your mindset for success." },
-      { "icon": "🕯️", "name": "Intention Candles", "desc": "Crafted with specific intentions to manifest your desires." },
-      { "icon": "🧂", "name": "Aromatherapy Salts", "desc": "Specially formulated salts to protect, cleanse, and attract abundance." }
+      {
+        "icon": "✨",
+        "name": "Holistic Wellness",
+        "desc": "Advanced coaching techniques to clear mental blockages and restore balance."
+      },
+      {
+        "icon": "🧠",
+        "name": "NLP Coaching",
+        "desc": "Neuro Linguistic Programming to rewire your mindset for success."
+      },
+      {
+        "icon": "🕯️",
+        "name": "Intention Candles",
+        "desc": "Crafted with specific intentions to manifest your desires."
+      },
+      {
+        "icon": "🧂",
+        "name": "Aromatherapy Salts",
+        "desc": "Specially formulated salts to protect, cleanse, and attract abundance."
+      }
     ]
   },
   "products": {
@@ -86,7 +102,11 @@
   "footer": {
     "brand": "Bodhisatvvam",
     "tagline": "Empower Your Wellness & Transform Your Life. Guided by Neepa Patel, Life Coach & Wellness Expert.",
-    "address": ["Office: 10, Ashine,", "Svnit Campus, Icchanath,", "Surat, Gujarat, India"],
+    "address": [
+      "Office: 10, Ashine,",
+      "Svnit Campus, Icchanath,",
+      "Surat, Gujarat, India"
+    ],
     "whatsapp": "+91 9737171090",
     "email": "shreebodhisatvvam@gmail.com",
     "website": "www.shreebodhisatvvam.com",
