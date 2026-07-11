@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-//  Bodhisatvvam -- Backend Server v3 (Razorpay Integration)
+//  Bodhisatvvam -- Backend Server v4 (Cashfree Integration)
 //  New in this version:
-//    ✅ POST /api/create-order  -- creates Razorpay order, returns order_id + key
-//    ✅ POST /api/verify-payment -- verifies signature, then logs to Sheet + WhatsApp
-//    ✅ Razorpay signature verification (HMAC-SHA256) -- prevents fake payment claims
+//    ✅ POST /api/create-order  -- creates Cashfree order, returns payment_session_id
+//    ✅ POST /api/verify-payment -- fetches order status from Cashfree to confirm payment
+//    ✅ GET  /api/payment-return -- handles redirect after Cashfree checkout
 //    ✅ All previous hardening retained (CORS, rate limit, validation, sanitized logs)
 // ═══════════════════════════════════════════════════════════
 
@@ -14,7 +14,7 @@ const fs        = require('fs');
 const cors      = require('cors');
 const crypto    = require('crypto'); // Built-in Node.js -- no install needed
 const rateLimit = require('express-rate-limit');
-const Razorpay  = require('razorpay');
+const { Cashfree } = require('cashfree-pg');
 const multer    = require('multer');
 const helmet    = require('helmet');
 const sbSync    = require('./supabase-sync');
@@ -32,8 +32,8 @@ const REQUIRED_ENV = [
     'GOOGLE_SCRIPT_URL',
     'GOOGLE_SCRIPT_SECRET',
     'ALLOWED_ORIGIN',
-    'RAZORPAY_KEY_ID',
-    'RAZORPAY_KEY_SECRET',
+    'CASHFREE_APP_ID',
+    'CASHFREE_SECRET_KEY',
 ];
 
 const missingEnv = REQUIRED_ENV.filter(k => !process.env[k]);
@@ -46,13 +46,21 @@ const PHONE_NUMBER_ID      = process.env.PHONE_NUMBER_ID;
 const GOOGLE_SCRIPT_URL    = process.env.GOOGLE_SCRIPT_URL;
 const GOOGLE_SCRIPT_SECRET = process.env.GOOGLE_SCRIPT_SECRET;
 const ALLOWED_ORIGIN       = process.env.ALLOWED_ORIGIN || '*';
-const RAZORPAY_KEY_ID      = process.env.RAZORPAY_KEY_ID;
-const RAZORPAY_KEY_SECRET  = process.env.RAZORPAY_KEY_SECRET;
+const CASHFREE_APP_ID      = process.env.CASHFREE_APP_ID;
+const CASHFREE_SECRET_KEY  = process.env.CASHFREE_SECRET_KEY;
 
-// -- 2. RAZORPAY CLIENT ---------------------------------------------
-const razorpay = (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET)
-    ? new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET })
-    : null;
+// -- 2. CASHFREE CLIENT ----------------------------------------------
+// Cashfree uses static class properties — no instance needed
+let cashfreeConfigured = false;
+if (CASHFREE_APP_ID && CASHFREE_SECRET_KEY) {
+    Cashfree.XClientId     = CASHFREE_APP_ID;
+    Cashfree.XClientSecret = CASHFREE_SECRET_KEY;
+    // Use SANDBOX for testing, switch to PRODUCTION when live keys are ready
+    Cashfree.XEnvironment  = (process.env.CASHFREE_ENV === 'PRODUCTION')
+        ? Cashfree.Environment.PRODUCTION
+        : Cashfree.Environment.SANDBOX;
+    cashfreeConfigured = true;
+}
 
 // -- 3. MIDDLEWARE --------------------------------------------------------
 // Supports single origin, comma-separated list, or * wildcard
@@ -63,7 +71,7 @@ const allowedOrigins = ALLOWED_ORIGIN === '*'
 // Helmet — sets secure HTTP headers (X-Content-Type-Options, X-Frame-Options, etc.)
 app.use(helmet({
     contentSecurityPolicy: false,  // Disabled because inline scripts are used in HTML
-    crossOriginEmbedderPolicy: false, // Allow Razorpay & external embeds
+    crossOriginEmbedderPolicy: false, // Allow Cashfree & external embeds
 }));
 
 app.use(cors({
@@ -165,11 +173,21 @@ function formatItemsForWhatsApp(items) {
     return String(items);
 }
 
-// Converts "₹1,599.00" or 1599 → integer paise (Razorpay uses paise)
-function toPaise(total) {
-    const num = parseFloat(String(total).replace(/[^0-9.]/g, ''));
-    return Math.round(num * 100); // ₹599.00 → 59900 paise
+// Converts "₹1,599.00" or 1599 → float (Cashfree uses rupees, not paise)
+function toRupees(total) {
+    return parseFloat(String(total).replace(/[^0-9.]/g, ''));
 }
+
+// In-memory map to store pending order data between create → verify
+// Key: bodhiOrderId, Value: { name, phone, address, items, total, customerNotes, cfOrderId }
+const pendingOrders = new Map();
+// Auto-cleanup after 30 minutes
+setInterval(() => {
+    const cutoff = Date.now() - 30 * 60 * 1000;
+    for (const [key, val] of pendingOrders) {
+        if (val._created < cutoff) pendingOrders.delete(key);
+    }
+}, 10 * 60 * 1000);
 
 async function pushToSheet(payload, attempt = 1) {
     if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_SECRET) return false;
@@ -197,7 +215,7 @@ async function pushToSheet(payload, attempt = 1) {
 async function sendWhatsApp(name, phone, orderId, items, total, address, customerNotes) {
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return;
     try {
-        const body =
+        let body =
             `*Namaste ${name},* 🙏\n\n` +
             `Your payment was successful! ✨\n\n` +
             `*Order Confirmed (${orderId})*\n` +
@@ -205,7 +223,7 @@ async function sendWhatsApp(name, phone, orderId, items, total, address, custome
             `${formatItemsForWhatsApp(items)}\n` +
             `--------------------------\n` +
             `*Total Paid:* ${total}\n` +
-            `*Delivery to:* ${address}\n\n`; 
+            `*Delivery to:* ${address}\n\n`;
 
             if (customerNotes && customerNotes.trim() !== '') {
                     body += `*Notes:* ${customerNotes.split(' | ').join('\n')}\n\n`;
@@ -237,9 +255,9 @@ async function sendWhatsApp(name, phone, orderId, items, total, address, custome
     }
 }
 
-// -- 6. ROUTE: CREATE RAZORPAY ORDER -------------------------------
+// -- 6. ROUTE: CREATE CASHFREE ORDER -------------------------------
 // Called when customer clicks "Pay Now" -- before payment happens.
-// Creates a Razorpay order and returns the order_id to the frontend.
+// Creates a Cashfree order and returns payment_session_id to the frontend.
 app.post('/api/create-order', orderLimiter, async (req, res) => {
     const { name, phone, address, items, total, customerNotes} = req.body;
 
@@ -248,7 +266,7 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         return res.status(400).json({ success: false, message: errors.join(' ') });
     }
 
-    if (!razorpay) {
+    if (!cashfreeConfigured) {
         return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
     }
 
@@ -271,109 +289,143 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
     }
 
     const bodhiOrderId = generateOrderId(); // Our internal ID
-    const amountPaise  = Math.round(calculatedTotal * 100);
+    const sanitizedPhone = phone.replace(/\D/g, '');
+    const returnUrl = `${ALLOWED_ORIGIN === '*' ? 'https://bodhisatvvam.onrender.com' : ALLOWED_ORIGIN}/api/payment-return?order_id=${bodhiOrderId}`;
 
-    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${amountPaise / 100} (Client total: ${total})`);
+    console.log(`💳 Creating Cashfree order | ${bodhiOrderId} | ₹${calculatedTotal} (Client total: ${total})`);
 
     try {
-        const rzpOrder = await razorpay.orders.create({
-            amount:   amountPaise,
-            currency: 'INR',
-            receipt:  bodhiOrderId, // Links Razorpay order to our ID
-            notes: {
-                customer_name:    name,
-                customer_phone:   phone.replace(/\D/g, ''),
-                delivery_address: address,
-                bdh_order_id:     bodhiOrderId,
+        const cfRequest = {
+            order_amount:   calculatedTotal,
+            order_currency: 'INR',
+            order_id:       bodhiOrderId,
+            customer_details: {
+                customer_id:    sanitizedPhone,  // Use phone as unique customer ID
+                customer_phone: sanitizedPhone,
+                customer_name:  name,
             },
+            order_meta: {
+                return_url: returnUrl,
+            },
+            order_note: `Bodhisatvvam order ${bodhiOrderId}`,
+        };
+
+        const cfResponse = await Cashfree.PGCreateOrder(cfRequest);
+        const cfOrder = cfResponse.data;
+
+        console.log(`✅ Cashfree order created → ${cfOrder.cf_order_id}`);
+
+        // Store order data so verify-payment can access it later
+        pendingOrders.set(bodhiOrderId, {
+            name, phone: sanitizedPhone, address, items, total,
+            customerNotes: customerNotes || '',
+            cfOrderId: cfOrder.cf_order_id,
+            _created: Date.now(),
         });
 
-        console.log(`✅ Razorpay order created → ${rzpOrder.id}`);
-
-        // Return everything the frontend Razorpay SDK needs
+        // Return everything the frontend Cashfree SDK needs
         return res.status(200).json({
-            success:       true,
-            razorpayOrderId: rzpOrder.id,     // rzp_order_xxx -- used by the JS SDK
-            bodhiOrderId,                      // #BDH-xxx -- shown to customer
-            amount:        amountPaise,
-            currency:      'INR',
-            keyId:         RAZORPAY_KEY_ID,   // Public key -- safe to send to frontend
-            prefill: {
-                name,
-                contact: phone.replace(/\D/g, ''),
-            },
+            success:          true,
+            paymentSessionId: cfOrder.payment_session_id,
+            bodhiOrderId,
+            cfOrderId:        cfOrder.cf_order_id,
+            amount:           calculatedTotal,
+            currency:         'INR',
         });
 
     } catch (err) {
-        console.error(`❌ Razorpay order creation failed: ${err.message}`);
+        const errMsg = err?.response?.data?.message || err.message;
+        console.error(`❌ Cashfree order creation failed: ${errMsg}`);
         return res.status(500).json({ success: false, message: 'Could not initiate payment. Please try again.' });
     }
 });
 
 // -- 7. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
-// Called AFTER Razorpay payment succeeds on the frontend.
-// Verifies the HMAC signature (proves payment is real), then logs + notifies.
+// Called AFTER Cashfree payment completes (redirect or frontend poll).
+// Fetches order status from Cashfree API to confirm payment is real.
 app.post('/api/verify-payment', orderLimiter, async (req, res) => {
-    const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        // Order details (sent again so we can log them)
-        bodhiOrderId,
-        name,
-        phone,
-        address,
-        items,
-        total,
-        customerNotes
-    } = req.body;
+    const { bodhiOrderId } = req.body;
 
-    // 7a. Verify Razorpay HMAC signature
-    // This is the critical security step -- without it anyone could fake a payment
-    const expectedSignature = crypto
-        .createHmac('sha256', RAZORPAY_KEY_SECRET)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-        .digest('hex');
-
-    if (expectedSignature !== razorpay_signature) {
-        console.error(`❌ Signature mismatch for ${bodhiOrderId} -- possible fraud attempt`);
-        return res.status(400).json({ success: false, message: 'Payment verification failed.' });
+    if (!bodhiOrderId) {
+        return res.status(400).json({ success: false, message: 'Missing order ID.' });
     }
 
-    console.log(`✅ Payment verified → ${bodhiOrderId} | Razorpay: ${razorpay_payment_id}`);
+    if (!cashfreeConfigured) {
+        return res.status(503).json({ success: false, message: 'Payment system not configured.' });
+    }
 
-    const sanitizedPhone = phone.replace(/\D/g, '');
+    try {
+        // 7a. Fetch order status from Cashfree (server-to-server — cannot be faked)
+        const cfResponse = await Cashfree.PGFetchOrder(bodhiOrderId);
+        const cfOrder = cfResponse.data;
 
-    // 7b. Log to Google Sheet (status = "Paid")
-    await pushToSheet({
-        orderId: bodhiOrderId,
-        name,
-        phone:   sanitizedPhone,
-        address,
-        items,
-        total,
-        status:  'Paid', // Override default "New Order" since payment is confirmed
-        paymentId: razorpay_payment_id,
-        notes: customerNotes || ''
-    });
+        if (cfOrder.order_status !== 'PAID') {
+            console.error(`❌ Payment not completed for ${bodhiOrderId} — status: ${cfOrder.order_status}`);
+            return res.status(400).json({ success: false, message: `Payment status: ${cfOrder.order_status}. Please try again.` });
+        }
 
-    // 7c. Send WhatsApp confirmation
-    await sendWhatsApp(name, sanitizedPhone, bodhiOrderId, items, total, address, customerNotes);
+        // 7b. Get stored order data
+        const orderData = pendingOrders.get(bodhiOrderId);
+        if (!orderData) {
+            console.warn(`⚠️ Order data not found in memory for ${bodhiOrderId} — payment was valid but data expired`);
+            return res.status(200).json({ success: true, orderId: bodhiOrderId, message: 'Payment confirmed! Please WhatsApp us if you do not receive confirmation.' });
+        }
 
-    // 7d. Save order to Supabase (non-blocking)
-    sbSync.saveOrder({
-        order_id: bodhiOrderId, name, phone: sanitizedPhone,
-        address, items, total: parseFloat(String(total).replace(/[^0-9.]/g, '')),
-        status: 'Paid', payment_id: razorpay_payment_id,
-        customer_notes: customerNotes || ''
-    });
+        const { name, phone, address, items, total, customerNotes } = orderData;
+        const paymentId = cfOrder.cf_order_id || bodhiOrderId;
 
-    // 7e. Return success to frontend
-    return res.status(200).json({
-        success: true,
-        orderId: bodhiOrderId,
-        message: 'Payment confirmed! Order placed successfully.',
-    });
+        console.log(`✅ Payment verified → ${bodhiOrderId} | Cashfree: ${paymentId}`);
+
+        // 7c. Log to Google Sheet (status = "Paid")
+        await pushToSheet({
+            orderId: bodhiOrderId, name, phone, address, items, total,
+            status: 'Paid', paymentId, notes: customerNotes
+        });
+
+        // 7d. Send WhatsApp confirmation
+        await sendWhatsApp(name, phone, bodhiOrderId, items, total, address, customerNotes);
+
+        // 7e. Save order to Supabase (non-blocking)
+        sbSync.saveOrder({
+            order_id: bodhiOrderId, name, phone,
+            address, items, total: parseFloat(String(total).replace(/[^0-9.]/g, '')),
+            status: 'Paid', payment_id: paymentId,
+            customer_notes: customerNotes
+        });
+
+        // Cleanup
+        pendingOrders.delete(bodhiOrderId);
+
+        // 7f. Return success to frontend
+        return res.status(200).json({
+            success: true,
+            orderId: bodhiOrderId,
+            message: 'Payment confirmed! Order placed successfully.',
+        });
+
+    } catch (err) {
+        const errMsg = err?.response?.data?.message || err.message;
+        console.error(`❌ Payment verification failed for ${bodhiOrderId}: ${errMsg}`);
+        return res.status(500).json({ success: false, message: 'Payment verification failed. Please contact us.' });
+    }
+});
+
+// -- 7b. ROUTE: PAYMENT RETURN URL (GET) ------------------
+// Cashfree redirects here after checkout; we verify then redirect to success page
+app.get('/api/payment-return', async (req, res) => {
+    const orderId = req.query.order_id;
+    if (!orderId || !cashfreeConfigured) {
+        return res.redirect('/?payment=error');
+    }
+    try {
+        const cfResponse = await Cashfree.PGFetchOrder(orderId);
+        if (cfResponse.data.order_status === 'PAID') {
+            return res.redirect(`/?payment=success&orderId=${encodeURIComponent(orderId)}`);
+        }
+        return res.redirect(`/?payment=failed&orderId=${encodeURIComponent(orderId)}`);
+    } catch {
+        return res.redirect(`/?payment=error&orderId=${encodeURIComponent(orderId)}`);
+    }
 });
 
 
@@ -398,121 +450,160 @@ app.get('/api/bookings/slots', async (req, res) => {
     }
 });
 
-// ── POST: Create Razorpay order for booking ───────────────
+// ── POST: Create Cashfree order for booking ───────────────
 app.post('/api/create-booking', orderLimiter, async (req, res) => {
     const { name, phone, sessionName, sessionId, date, slot, price } = req.body;
     if (!name || !phone || !sessionId || !date || !slot || !price)
         return res.status(400).json({ success: false, message: 'Missing required fields.' });
-    if (!razorpay)
+    if (!cashfreeConfigured)
         return res.status(503).json({ success: false, message: 'Payment system not configured.' });
 
     const bookingId   = '#BDHB-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
-    const amountPaise = Math.round(price * 100);
+    const sanitizedPhone = phone.replace(/\D/g, '');
+    const returnUrl = `${ALLOWED_ORIGIN === '*' ? 'https://bodhisatvvam.onrender.com' : ALLOWED_ORIGIN}/booking.html?payment=success&bookingId=${encodeURIComponent(bookingId)}`;
     console.log(`📅 Creating booking | ${bookingId} | ${sessionName} | ${date} ${slot}`);
 
     try {
-        const rzpOrder = await razorpay.orders.create({
-            amount: amountPaise, currency: 'INR', receipt: bookingId,
-            notes: { customer_name: name, session: sessionName, date, slot },
+        const cfRequest = {
+            order_amount:   price,
+            order_currency: 'INR',
+            order_id:       bookingId,
+            customer_details: {
+                customer_id:    sanitizedPhone,
+                customer_phone: sanitizedPhone,
+                customer_name:  name,
+            },
+            order_meta: {
+                return_url: returnUrl,
+            },
+            order_note: `Booking: ${sessionName} on ${date} at ${slot}`,
+        };
+
+        const cfResponse = await Cashfree.PGCreateOrder(cfRequest);
+        const cfOrder = cfResponse.data;
+
+        // Store booking data for verification step
+        pendingOrders.set(bookingId, {
+            name, phone: sanitizedPhone, sessionId, sessionName,
+            date, slot, price, email: req.body.email || '', notes: req.body.notes || '',
+            _created: Date.now(),
         });
+
         return res.status(200).json({
-            success: true, razorpayOrderId: rzpOrder.id,
-            bookingId, amount: amountPaise, currency: 'INR', keyId: RAZORPAY_KEY_ID,
+            success: true, paymentSessionId: cfOrder.payment_session_id,
+            bookingId, amount: price, currency: 'INR',
         });
     } catch (err) {
-        console.error('Booking Razorpay error:', err.message);
+        const errMsg = err?.response?.data?.message || err.message;
+        console.error('Booking Cashfree error:', errMsg);
         return res.status(500).json({ success: false, message: 'Could not initiate payment.' });
     }
 });
 
 // ── POST: Verify payment + confirm booking ────────────────
 app.post('/api/verify-booking', orderLimiter, async (req, res) => {
-    const {
-        razorpay_order_id, razorpay_payment_id, razorpay_signature,
-        bookingId, name, phone, email, notes,
-        sessionId, sessionName, date, slot, price,
-    } = req.body;
+    const { bookingId } = req.body;
 
-    const expectedSig = crypto
-        .createHmac('sha256', RAZORPAY_KEY_SECRET)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-        .digest('hex');
-
-    if (expectedSig !== razorpay_signature) {
-        console.error(`Booking signature mismatch -- ${bookingId}`);
-        return res.status(400).json({ success: false, message: 'Payment verification failed.' });
+    if (!bookingId || !cashfreeConfigured) {
+        return res.status(400).json({ success: false, message: 'Missing booking ID or payment not configured.' });
     }
 
-    console.log(`✅ Booking verified --> ${bookingId}`);
-    const sanitizedPhone = phone.replace(/\D/g, '');
+    try {
+        // Fetch order status from Cashfree
+        const cfResponse = await Cashfree.PGFetchOrder(bookingId);
+        const cfOrder = cfResponse.data;
 
-    // Log to Google Sheet
-    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_SECRET) {
-        try {
-            await axios.post(GOOGLE_SCRIPT_URL, {
-                secret: GOOGLE_SCRIPT_SECRET, action: 'addBooking',
-                bookingId, name, phone: sanitizedPhone, email: email || '',
-                sessionId, sessionName, date, slot,
-                total: 'Rs.' + price, notes: notes || '',
-                paymentId: razorpay_payment_id, status: 'Confirmed',
-            }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
-            console.log(`✅ Booking logged --> ${bookingId}`);
-        } catch (err) {
-            console.error(`Booking sheet error: ${err.message}`);
+        if (cfOrder.order_status !== 'PAID') {
+            console.error(`Booking payment not completed -- ${bookingId} — status: ${cfOrder.order_status}`);
+            return res.status(400).json({ success: false, message: 'Payment verification failed.' });
         }
+
+        // Get stored booking data
+        const bookingData = pendingOrders.get(bookingId);
+        if (!bookingData) {
+            return res.status(200).json({ success: true, bookingId, message: 'Payment confirmed! Please WhatsApp us if you do not receive confirmation.' });
+        }
+
+        const { name, phone: sanitizedPhone, email, notes, sessionId, sessionName, date, slot, price } = bookingData;
+        const paymentId = cfOrder.cf_order_id || bookingId;
+
+        console.log(`✅ Booking verified --> ${bookingId}`);
+
+        // Log to Google Sheet
+        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_SECRET) {
+            try {
+                await axios.post(GOOGLE_SCRIPT_URL, {
+                    secret: GOOGLE_SCRIPT_SECRET, action: 'addBooking',
+                    bookingId, name, phone: sanitizedPhone, email: email || '',
+                    sessionId, sessionName, date, slot,
+                    total: 'Rs.' + price, notes: notes || '',
+                    paymentId, status: 'Confirmed',
+                }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
+                console.log(`✅ Booking logged --> ${bookingId}`);
+            } catch (err) {
+                console.error(`Booking sheet error: ${err.message}`);
+            }
+        }
+
+        // WhatsApp to customer
+        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
+            const toNum = '+' + sanitizedPhone;
+            try {
+                const customerMsg =
+                    `*Namaste ${name},* 🙏\n\n` +
+                    `Your healing session is confirmed! ✨\n\n` +
+                    `*Booking ID:* ${bookingId}\n` +
+                    `*Session:* ${sessionName}\n` +
+                    `*Date:* ${date}\n` +
+                    `*Time:* ${slot} IST\n` +
+                    `*Mode:* Online Video Call\n` +
+                    `*Paid:* Rs.${price}\n\n` +
+                    `Neepa will send you the video call link at least 15 minutes before your session.\n\n` +
+                    `_Empower Your Life_ 🌸\n-- Shree Bodhisatvvam`;
+                await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+                    { messaging_product: 'whatsapp', to: toNum, type: 'text', text: { body: customerMsg } },
+                    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+                );
+                console.log(`✅ Customer WA sent --> ${bookingId}`);
+            } catch (err) { console.error(`Customer WA error: ${err.message}`); }
+
+            // WhatsApp to Neepa
+            try {
+                const neepaPhone = '+' + (process.env.NEEPA_WHATSAPP || '919737171090').replace(/\D/g, '');
+                const neepaMsg =
+                    `*New Booking!* 📅\n\n` +
+                    `*ID:* ${bookingId}\n` +
+                    `*Session:* ${sessionName}\n` +
+                    `*Customer:* ${name} (+${sanitizedPhone})\n` +
+                    `*Date:* ${date} at ${slot} IST\n` +
+                    `*Paid:* Rs.${price}\n` +
+                    (notes ? `*Notes:* ${notes}` : '') +
+                    `\n\nPlease send the video call link to the customer before the session.`;
+                await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+                    { messaging_product: 'whatsapp', to: neepaPhone, type: 'text', text: { body: neepaMsg } },
+                    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
+                );
+                console.log(`✅ Neepa WA sent --> ${bookingId}`);
+            } catch (err) { console.error(`Neepa WA error: ${err.message}`); }
+        }
+
+        // Save booking to Supabase (non-blocking)
+        sbSync.saveBooking({
+            booking_id: bookingId, name, phone: sanitizedPhone,
+            email: email || '', session_name: sessionName,
+            date, time_slot: slot, price, payment_id: paymentId,
+            notes: notes || ''
+        });
+
+        // Cleanup
+        pendingOrders.delete(bookingId);
+
+        return res.status(200).json({ success: true, bookingId, message: 'Booking confirmed!' });
+    } catch (err) {
+        const errMsg = err?.response?.data?.message || err.message;
+        console.error(`Booking verification failed for ${bookingId}: ${errMsg}`);
+        return res.status(500).json({ success: false, message: 'Payment verification failed. Please contact us.' });
     }
-
-    // WhatsApp to customer
-    if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-        const toNum = '+' + sanitizedPhone;
-        try {
-            const customerMsg =
-                `*Namaste ${name},* 🙏\n\n` +
-                `Your healing session is confirmed! ✨\n\n` +
-                `*Booking ID:* ${bookingId}\n` +
-                `*Session:* ${sessionName}\n` +
-                `*Date:* ${date}\n` +
-                `*Time:* ${slot} IST\n` +
-                `*Mode:* Online Video Call\n` +
-                `*Paid:* Rs.${price}\n\n` +
-                `Neepa will send you the video call link at least 15 minutes before your session.\n\n` +
-                `_Empower Your Life_ 🌸\n-- Shree Bodhisatvvam`;
-            await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
-                { messaging_product: 'whatsapp', to: toNum, type: 'text', text: { body: customerMsg } },
-                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
-            );
-            console.log(`✅ Customer WA sent --> ${bookingId}`);
-        } catch (err) { console.error(`Customer WA error: ${err.message}`); }
-
-        // WhatsApp to Neepa
-        try {
-            const neepaPhone = '+' + (process.env.NEEPA_WHATSAPP || '919737171090').replace(/\D/g, '');
-            const neepaMsg =
-                `*New Booking!* 📅\n\n` +
-                `*ID:* ${bookingId}\n` +
-                `*Session:* ${sessionName}\n` +
-                `*Customer:* ${name} (+${sanitizedPhone})\n` +
-                `*Date:* ${date} at ${slot} IST\n` +
-                `*Paid:* Rs.${price}\n` +
-                (notes ? `*Notes:* ${notes}` : '') +
-                `\n\nPlease send the video call link to the customer before the session.`;
-            await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
-                { messaging_product: 'whatsapp', to: neepaPhone, type: 'text', text: { body: neepaMsg } },
-                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }, timeout: 10000 }
-            );
-            console.log(`✅ Neepa WA sent --> ${bookingId}`);
-        } catch (err) { console.error(`Neepa WA error: ${err.message}`); }
-    }
-
-    // Save booking to Supabase (non-blocking)
-    sbSync.saveBooking({
-        booking_id: bookingId, name, phone: sanitizedPhone,
-        email: email || '', session_name: sessionName,
-        date, time_slot: slot, price, payment_id: razorpay_payment_id,
-        notes: notes || ''
-    });
-
-    return res.status(200).json({ success: true, bookingId, message: 'Booking confirmed!' });
 });
 
 
@@ -1140,7 +1231,7 @@ app.get('/health', (req, res) => {
         env: {
             whatsapp:    !!WHATSAPP_TOKEN,
             googleSheet: !!GOOGLE_SCRIPT_URL,
-            razorpay:    !!razorpay,
+            cashfree:    cashfreeConfigured,
             supabase:    sbSync.isConfigured,
             cors:        ALLOWED_ORIGIN,
         },
@@ -1533,7 +1624,7 @@ async function checkAbandonedCarts() {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
-    console.log(`   Razorpay  : ${razorpay    ? '✅ configured' : '❌ not set'}`);
+    console.log(`   Cashfree  : ${cashfreeConfigured ? '✅ configured' : '❌ not set'}`);
     console.log(`   WhatsApp  : ${WHATSAPP_TOKEN ? '✅ configured' : '❌ not set'}`);
     console.log(`   Sheet     : ${GOOGLE_SCRIPT_URL ? '✅ configured' : '❌ not set'}`);
     console.log(`   Supabase  : ${sbSync.isConfigured ? '✅ configured' : '❌ not set'}`);

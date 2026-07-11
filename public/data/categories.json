@@ -3,8 +3,8 @@
     "id": "salts",
     "name": "Energy Salts",
     "emoji": "🧂",
-    "desc": "Specially formulated energy-infused salts to protect, cleanse, and attract abundance.",
-    "defaultProductDesc": "Energy-infused salt.",
+    "desc": "Specially formulated aromatherapy salts to protect, cleanse, and attract abundance.",
+    "defaultProductDesc": "Handcrafted aromatherapy salt.",
     "idPrefix": 100,
     "displayOrder": 1
   },
@@ -21,8 +21,8 @@
     "id": "candles",
     "name": "Infused Candles",
     "emoji": "🕯️",
-    "desc": "Energy-infused candles charged with specific intentions.",
-    "defaultProductDesc": "Energy-infused candle.",
+    "desc": "Handcrafted intention candles crafted with specific purposes.",
+    "defaultProductDesc": "Handcrafted intention candle.",
     "idPrefix": 300,
     "displayOrder": 3
   }

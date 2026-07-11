@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Book a Healing Session — Bodhisatvvam</title>
+<title>Book a Wellness Session — Bodhisatvvam</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -338,9 +338,9 @@
 
 <!-- Hero -->
 <div class="hero">
-  <div class="hero-tag">Online Healing Sessions</div>
+  <div class="hero-tag">Online Wellness Coaching</div>
   <h1 class="hero-title">Book a Session with<br><em>Neepa Patel</em></h1>
-  <p class="hero-sub">One-on-one video call sessions. Choose your healing modality, pick a date and time that works for you, and pay securely online.</p>
+  <p class="hero-sub">One-on-one video call sessions. Choose your coaching program, pick a date and time that works for you, and pay securely online.</p>
 </div>
 
 <!-- Session Types -->
@@ -450,7 +450,7 @@
     <span class="success-icon">🌸</span>
     <div class="success-title">Session Booked!</div>
     <p class="success-detail" id="successDetail">
-      Your healing session has been confirmed. You'll receive a WhatsApp message with the video call link shortly.
+      Your wellness session has been confirmed. You'll receive a WhatsApp message with the video call link shortly.
     </p>
     <div class="success-id" id="successId"></div>
     <button onclick="location.href='/'" style="
@@ -461,8 +461,8 @@
   </div>
 </div>
 
-<!-- Razorpay SDK -->
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<!-- Cashfree SDK -->
+<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────
@@ -481,13 +481,13 @@ const MEDITATION_TIME_SLOTS = ['05:00 AM', '09:30 AM'];
 
 // Session types — Prices updated to 500, Group Meditation added
 const SESSIONS = [
-  { id: 'free_consultation', name: 'Free Consultation', icon: '🎁', desc: 'A complimentary 20-min intro call to understand your needs and find the right healing path.', price: 0, duration: '20 min' },
-  { id: 'chakra', name: 'Chakra Healing & Balancing', icon: '✨', desc: 'Clear blockages and restore your energy centres.', price: 500, duration: '60 min' },
-  { id: 'nlp', name: 'NLP Therapy', icon: '🧠', desc: 'Rewire your mindset with Neuro-Linguistic Programming.', price: 500, duration: '60 min' },
-  { id: 'pranic', name: 'Pranic Healing', icon: '💫', desc: 'Advanced energy healing to restore your aura.', price: 500, duration: '60 min' },
-  { id: 'aura', name: 'Aura Cleaning & Energize', icon: '🌿', desc: 'Deep cleanse and energize your aura field.', price: 500, duration: '60 min' },
-  { id: 'relationship', name: 'Relationship Healing', icon: '💖', desc: 'Heal and restore harmony in your relationships.', price: 500, duration: '60 min' },
-  { id: 'mental', name: 'Mental & Emotional Healing', icon: '🧘', desc: 'Overcome anxiety, fear, stress and negativity.', price: 500, duration: '60 min' },
+  { id: 'free_consultation', name: 'Free Consultation', icon: '🎁', desc: 'A complimentary 20-min intro call to understand your needs and find the right wellness path.', price: 0, duration: '20 min' },
+  { id: 'chakra', name: 'Mindfulness & Balance Coaching', icon: '✨', desc: 'Restore inner balance and alignment through guided mindfulness techniques.', price: 500, duration: '60 min' },
+  { id: 'nlp', name: 'NLP-based Life Coaching', icon: '🧠', desc: 'Rewire your mindset with Neuro-Linguistic Programming.', price: 500, duration: '60 min' },
+  { id: 'pranic', name: 'Holistic Wellness Coaching', icon: '💫', desc: 'Advanced wellness techniques to restore your mental and emotional balance.', price: 500, duration: '60 min' },
+  { id: 'aura', name: 'Stress Relief & Mindfulness', icon: '🌿', desc: 'Deep relaxation and mindfulness practices for stress management.', price: 500, duration: '60 min' },
+  { id: 'relationship', name: 'Relationship Coaching', icon: '💖', desc: 'Improve and restore harmony in your relationships.', price: 500, duration: '60 min' },
+  { id: 'mental', name: 'Mental & Emotional Wellness', icon: '🧘', desc: 'Overcome anxiety, fear, stress and negativity.', price: 500, duration: '60 min' },
   { id: 'group_meditation', name: 'Group Meditation', icon: '🧘‍♂️', desc: 'Join any 1 batch (5:00-5:30 AM or 9:30-10:00 AM).', price: 100, duration: '30 min' },
 ];
 
@@ -619,7 +619,7 @@ function selectDate(dateStr) {
 function renderSlots() {
   const container = document.getElementById('slotsContainer');
   if (!selectedSession) {
-    container.innerHTML = `<div class="no-date-msg">Please select a healing session above first.</div>`;
+    container.innerHTML = `<div class="no-date-msg">Please select a wellness session above first.</div>`;
     return;
   }
   if (!selectedDate) {
@@ -716,7 +716,7 @@ async function bookSession() {
     name, phone: digits, email, notes,
   };
 
-  // ── FREE SESSION: skip Razorpay, confirm directly ──
+  // ── FREE SESSION: skip payment, confirm directly ──
   if (selectedSession.price === 0) {
     btn.textContent = '⏳ Confirming…';
     btn.disabled = true;
@@ -745,8 +745,11 @@ async function bookSession() {
     return;
   }
 
+  // Initialize Cashfree SDK
+  const cashfreeSDK = Cashfree({ mode: 'sandbox' });
+
   try {
-    // Step 1 — Create Razorpay order
+    // Step 1 — Create Cashfree order
     const createRes  = await fetch(`${API_BASE}/api/create-booking`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -764,63 +767,49 @@ async function bookSession() {
     btn.textContent = '💳 Pay & Confirm Booking';
     btn.disabled = false;
 
-    // Step 2 — Open Razorpay
-    const rzp = new Razorpay({
-      key:         createData.keyId,
-      amount:      createData.amount,
-      currency:    'INR',
-      name:        'Bodhisatvvam',
-      description: `${selectedSession.name} — ${formatDisplayDate(selectedDate)} at ${selectedSlot}`,
-      order_id:    createData.razorpayOrderId,
-      prefill:     { name, contact: digits, email },
-      theme:       { color: '#1c3a28' },
-      modal: {
-        ondismiss: () => {
-          btn.textContent = '💳 Pay & Confirm Booking';
-          btn.disabled = false;
-          showError('Payment cancelled. You can try again.');
-        }
-      },
-      handler: async function(response) {
-        btn.textContent = '⏳ Confirming Booking…';
-        btn.disabled = true;
-        try {
-          // Step 3 — Verify payment + confirm booking
-          const verifyRes  = await fetch(`${API_BASE}/api/verify-booking`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              razorpay_order_id:   response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature:  response.razorpay_signature,
-              bookingId:           createData.bookingId,
-              ...bookingData,
-            }),
-          });
-          const verifyData = await verifyRes.json();
-
-          if (verifyRes.ok && verifyData.success) {
-            document.getElementById('successId').textContent = verifyData.bookingId;
-            document.getElementById('successDetail').textContent =
-              `Your ${selectedSession.name} session is confirmed for ${formatDisplayDate(selectedDate)} at ${selectedSlot} IST. ` +
-              `Neepa will send you the video call link on WhatsApp before your session. 🌸`;
-            document.getElementById('successOverlay').classList.add('open');
-            // Refresh booked slots
-            bookedSlots[selectedDate] = [...(bookedSlots[selectedDate] || []), selectedSlot];
-            renderCalendar();
-            renderSlots();
-          } else {
-            showError(verifyData.message || 'Payment done but confirmation failed. Please WhatsApp us with payment ID: ' + response.razorpay_payment_id);
-          }
-        } catch (err) {
-          showError('Booking confirmed but server error. Please WhatsApp us: +91 9737171090');
-        } finally {
-          btn.textContent = '💳 Pay & Confirm Booking';
-          btn.disabled = false;
-        }
-      }
+    // Step 2 — Open Cashfree checkout modal
+    const result = await cashfreeSDK.checkout({
+      paymentSessionId: createData.paymentSessionId,
+      redirectTarget:   '_modal',
     });
-    rzp.open();
+
+    if (result.error) {
+      showError('Payment cancelled. You can try again.');
+      btn.textContent = '💳 Pay & Confirm Booking';
+      btn.disabled = false;
+      return;
+    }
+
+    // Step 3 — Verify payment + confirm booking
+    btn.textContent = '⏳ Confirming Booking…';
+    btn.disabled = true;
+    try {
+      const verifyRes  = await fetch(`${API_BASE}/api/verify-booking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: createData.bookingId }),
+      });
+      const verifyData = await verifyRes.json();
+
+      if (verifyRes.ok && verifyData.success) {
+        document.getElementById('successId').textContent = verifyData.bookingId;
+        document.getElementById('successDetail').textContent =
+          `Your ${selectedSession.name} session is confirmed for ${formatDisplayDate(selectedDate)} at ${selectedSlot} IST. ` +
+          `Neepa will send you the video call link on WhatsApp before your session. 🌸`;
+        document.getElementById('successOverlay').classList.add('open');
+        // Refresh booked slots
+        bookedSlots[selectedDate] = [...(bookedSlots[selectedDate] || []), selectedSlot];
+        renderCalendar();
+        renderSlots();
+      } else {
+        showError(verifyData.message || 'Payment done but confirmation failed. Please WhatsApp us with booking ID: ' + createData.bookingId);
+      }
+    } catch (err) {
+      showError('Booking confirmed but server error. Please WhatsApp us: +91 9737171090');
+    } finally {
+      btn.textContent = '💳 Pay & Confirm Booking';
+      btn.disabled = false;
+    }
 
   } catch (err) {
     showError('Could not connect. Please try again or WhatsApp us.');
