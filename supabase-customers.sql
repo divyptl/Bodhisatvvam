@@ -12,8 +12,3 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- If the table already exists, run these to add the new columns:
--- ALTER TABLE customers ADD COLUMN IF NOT EXISTS street_address TEXT DEFAULT '';
--- ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(50) DEFAULT '';
--- ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(50) DEFAULT '';
--- ALTER TABLE customers ADD COLUMN IF NOT EXISTS zip_code VARCHAR(10) DEFAULT '';

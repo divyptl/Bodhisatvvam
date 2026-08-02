@@ -461,8 +461,8 @@
   </div>
 </div>
 
-<!-- Cashfree SDK -->
-<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+<!-- Razorpay SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────
@@ -745,11 +745,8 @@ async function bookSession() {
     return;
   }
 
-  // Initialize Cashfree SDK
-  const cashfreeSDK = Cashfree({ mode: 'sandbox' });
-
   try {
-    // Step 1 — Create Cashfree order
+    // Step 1 — Create Razorpay order
     const createRes  = await fetch(`${API_BASE}/api/create-booking`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -767,49 +764,68 @@ async function bookSession() {
     btn.textContent = '💳 Pay & Confirm Booking';
     btn.disabled = false;
 
-    // Step 2 — Open Cashfree checkout modal
-    const result = await cashfreeSDK.checkout({
-      paymentSessionId: createData.paymentSessionId,
-      redirectTarget:   '_modal',
-    });
+    // Step 2 — Open Razorpay checkout popup
+    const options = {
+      key: createData.razorpayKeyId,
+      amount: createData.amount,
+      currency: createData.currency,
+      name: 'Shree Bodhisatvvam',
+      description: 'Booking: ' + selectedSession.name,
+      order_id: createData.razorpayOrderId,
+      handler: async function (response) {
+        // Step 3 — Verify payment + confirm booking
+        btn.textContent = '⏳ Confirming Booking…';
+        btn.disabled = true;
+        try {
+          const verifyRes  = await fetch(`${API_BASE}/api/verify-booking`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              bookingId: createData.bookingId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+          const verifyData = await verifyRes.json();
 
-    if (result.error) {
-      showError('Payment cancelled. You can try again.');
-      btn.textContent = '💳 Pay & Confirm Booking';
-      btn.disabled = false;
-      return;
-    }
+          if (verifyRes.ok && verifyData.success) {
+            document.getElementById('successId').textContent = verifyData.bookingId;
+            document.getElementById('successDetail').textContent =
+              `Your ${selectedSession.name} session is confirmed for ${formatDisplayDate(selectedDate)} at ${selectedSlot} IST. ` +
+              `Neepa will send you the video call link on WhatsApp before your session. 🌸`;
+            document.getElementById('successOverlay').classList.add('open');
+            // Refresh booked slots
+            bookedSlots[selectedDate] = [...(bookedSlots[selectedDate] || []), selectedSlot];
+            renderCalendar();
+            renderSlots();
+          } else {
+            showError(verifyData.message || 'Payment done but confirmation failed. Please WhatsApp us with booking ID: ' + createData.bookingId);
+          }
+        } catch (err) {
+          showError('Booking confirmed but server error. Please WhatsApp us: +91 9737171090');
+        } finally {
+          btn.textContent = '💳 Pay & Confirm Booking';
+          btn.disabled = false;
+        }
+      },
+      prefill: {
+        name: bookingData.name,
+        contact: bookingData.phone,
+        email: bookingData.email || '',
+      },
+      theme: { color: '#1c3a28' },
+      modal: {
+        ondismiss: function () {
+          showError('Payment cancelled. You can try again.');
+          btn.textContent = '💳 Pay & Confirm Booking';
+          btn.disabled = false;
+        },
+      },
+    };
 
-    // Step 3 — Verify payment + confirm booking
-    btn.textContent = '⏳ Confirming Booking…';
-    btn.disabled = true;
-    try {
-      const verifyRes  = await fetch(`${API_BASE}/api/verify-booking`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId: createData.bookingId }),
-      });
-      const verifyData = await verifyRes.json();
-
-      if (verifyRes.ok && verifyData.success) {
-        document.getElementById('successId').textContent = verifyData.bookingId;
-        document.getElementById('successDetail').textContent =
-          `Your ${selectedSession.name} session is confirmed for ${formatDisplayDate(selectedDate)} at ${selectedSlot} IST. ` +
-          `Neepa will send you the video call link on WhatsApp before your session. 🌸`;
-        document.getElementById('successOverlay').classList.add('open');
-        // Refresh booked slots
-        bookedSlots[selectedDate] = [...(bookedSlots[selectedDate] || []), selectedSlot];
-        renderCalendar();
-        renderSlots();
-      } else {
-        showError(verifyData.message || 'Payment done but confirmation failed. Please WhatsApp us with booking ID: ' + createData.bookingId);
-      }
-    } catch (err) {
-      showError('Booking confirmed but server error. Please WhatsApp us: +91 9737171090');
-    } finally {
-      btn.textContent = '💳 Pay & Confirm Booking';
-      btn.disabled = false;
-    }
+    const rzp = new Razorpay(options);
+    rzp.open();
 
   } catch (err) {
     showError('Could not connect. Please try again or WhatsApp us.');

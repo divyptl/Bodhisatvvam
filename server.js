@@ -1,9 +1,8 @@
 // ═══════════════════════════════════════════════════════════
-//  Bodhisatvvam -- Backend Server v4 (Cashfree Integration)
+//  Bodhisatvvam -- Backend Server v5 (Razorpay Integration)
 //  New in this version:
-//    ✅ POST /api/create-order  -- creates Cashfree order, returns payment_session_id
-//    ✅ POST /api/verify-payment -- fetches order status from Cashfree to confirm payment
-//    ✅ GET  /api/payment-return -- handles redirect after Cashfree checkout
+//    ✅ POST /api/create-order  -- creates Razorpay order, returns order_id + key
+//    ✅ POST /api/verify-payment -- verifies Razorpay HMAC signature to confirm payment
 //    ✅ All previous hardening retained (CORS, rate limit, validation, sanitized logs)
 // ═══════════════════════════════════════════════════════════
 
@@ -14,7 +13,7 @@ const fs        = require('fs');
 const cors      = require('cors');
 const crypto    = require('crypto'); // Built-in Node.js -- no install needed
 const rateLimit = require('express-rate-limit');
-const { Cashfree } = require('cashfree-pg');
+const Razorpay    = require('razorpay');
 const multer    = require('multer');
 const helmet    = require('helmet');
 const sbSync    = require('./supabase-sync');
@@ -32,8 +31,8 @@ const REQUIRED_ENV = [
     'GOOGLE_SCRIPT_URL',
     'GOOGLE_SCRIPT_SECRET',
     'ALLOWED_ORIGIN',
-    'CASHFREE_APP_ID',
-    'CASHFREE_SECRET_KEY',
+    'RAZORPAY_KEY_ID',
+    'RAZORPAY_KEY_SECRET',
 ];
 
 const missingEnv = REQUIRED_ENV.filter(k => !process.env[k]);
@@ -46,20 +45,16 @@ const PHONE_NUMBER_ID      = process.env.PHONE_NUMBER_ID;
 const GOOGLE_SCRIPT_URL    = process.env.GOOGLE_SCRIPT_URL;
 const GOOGLE_SCRIPT_SECRET = process.env.GOOGLE_SCRIPT_SECRET;
 const ALLOWED_ORIGIN       = process.env.ALLOWED_ORIGIN || '*';
-const CASHFREE_APP_ID      = process.env.CASHFREE_APP_ID;
-const CASHFREE_SECRET_KEY  = process.env.CASHFREE_SECRET_KEY;
+const RAZORPAY_KEY_ID      = process.env.RAZORPAY_KEY_ID;
+const RAZORPAY_KEY_SECRET  = process.env.RAZORPAY_KEY_SECRET;
 
-// -- 2. CASHFREE CLIENT ----------------------------------------------
-// Cashfree uses static class properties — no instance needed
-let cashfreeConfigured = false;
-if (CASHFREE_APP_ID && CASHFREE_SECRET_KEY) {
-    Cashfree.XClientId     = CASHFREE_APP_ID;
-    Cashfree.XClientSecret = CASHFREE_SECRET_KEY;
-    // Use SANDBOX for testing, switch to PRODUCTION when live keys are ready
-    Cashfree.XEnvironment  = (process.env.CASHFREE_ENV === 'PRODUCTION')
-        ? Cashfree.Environment.PRODUCTION
-        : Cashfree.Environment.SANDBOX;
-    cashfreeConfigured = true;
+// -- 2. RAZORPAY CLIENT -----------------------------------------------
+let razorpay = null;
+if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
+    razorpay = new Razorpay({
+        key_id: RAZORPAY_KEY_ID,
+        key_secret: RAZORPAY_KEY_SECRET,
+    });
 }
 
 // -- 3. MIDDLEWARE --------------------------------------------------------
@@ -71,7 +66,7 @@ const allowedOrigins = ALLOWED_ORIGIN === '*'
 // Helmet — sets secure HTTP headers (X-Content-Type-Options, X-Frame-Options, etc.)
 app.use(helmet({
     contentSecurityPolicy: false,  // Disabled because inline scripts are used in HTML
-    crossOriginEmbedderPolicy: false, // Allow Cashfree & external embeds
+    crossOriginEmbedderPolicy: false, // Allow Razorpay & external embeds
 }));
 
 app.use(cors({
@@ -173,9 +168,10 @@ function formatItemsForWhatsApp(items) {
     return String(items);
 }
 
-// Converts "₹1,599.00" or 1599 → float (Cashfree uses rupees, not paise)
-function toRupees(total) {
-    return parseFloat(String(total).replace(/[^0-9.]/g, ''));
+// Converts "₹1,599.00" or 1599 → integer paise (Razorpay uses paise)
+function toPaise(total) {
+    const num = parseFloat(String(total).replace(/[^0-9.]/g, ''));
+    return Math.round(num * 100); // ₹599.00 → 59900 paise
 }
 
 // In-memory map to store pending order data between create → verify
@@ -255,9 +251,9 @@ async function sendWhatsApp(name, phone, orderId, items, total, address, custome
     }
 }
 
-// -- 6. ROUTE: CREATE CASHFREE ORDER -------------------------------
+// -- 6. ROUTE: CREATE RAZORPAY ORDER --------------------------------
 // Called when customer clicks "Pay Now" -- before payment happens.
-// Creates a Cashfree order and returns payment_session_id to the frontend.
+// Creates a Razorpay order and returns order_id + key to the frontend.
 app.post('/api/create-order', orderLimiter, async (req, res) => {
     const { name, phone, address, items, total, customerNotes} = req.body;
 
@@ -266,7 +262,7 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         return res.status(400).json({ success: false, message: errors.join(' ') });
     }
 
-    if (!cashfreeConfigured) {
+    if (!razorpay) {
         return res.status(503).json({ success: false, message: 'Payment system not configured. Please contact us on WhatsApp.' });
     }
 
@@ -281,87 +277,77 @@ app.post('/api/create-order', orderLimiter, async (req, res) => {
         const product = products.find(p => p.id === item.id);
         if (product) {
             calculatedTotal += product.price * (item.qty || 1);
-            item.price = product.price; // Update client's payload with authoritative price
-            item.name = product.name;   // Sanitize name
+            item.price = product.price;
+            item.name = product.name;
         } else {
             return res.status(400).json({ success: false, message: `Invalid product in cart: ${item.id}` });
         }
     }
 
-    const bodhiOrderId = generateOrderId(); // Our internal ID
+    const bodhiOrderId = generateOrderId();
     const sanitizedPhone = phone.replace(/\D/g, '');
-    const returnUrl = `${ALLOWED_ORIGIN === '*' ? 'https://bodhisatvvam.onrender.com' : ALLOWED_ORIGIN}/api/payment-return?order_id=${bodhiOrderId}`;
 
-    console.log(`💳 Creating Cashfree order | ${bodhiOrderId} | ₹${calculatedTotal} (Client total: ${total})`);
+    console.log(`💳 Creating Razorpay order | ${bodhiOrderId} | ₹${calculatedTotal} (Client total: ${total})`);
 
     try {
-        const cfRequest = {
-            order_amount:   calculatedTotal,
-            order_currency: 'INR',
-            order_id:       bodhiOrderId,
-            customer_details: {
-                customer_id:    sanitizedPhone,  // Use phone as unique customer ID
-                customer_phone: sanitizedPhone,
-                customer_name:  name,
-            },
-            order_meta: {
-                return_url: returnUrl,
-            },
-            order_note: `Bodhisatvvam order ${bodhiOrderId}`,
-        };
+        const rzpOrder = await razorpay.orders.create({
+            amount:   toPaise(calculatedTotal),
+            currency: 'INR',
+            receipt:  bodhiOrderId,
+            notes:    { bodhiOrderId, customerName: name },
+        });
 
-        const cfResponse = await Cashfree.PGCreateOrder(cfRequest);
-        const cfOrder = cfResponse.data;
-
-        console.log(`✅ Cashfree order created → ${cfOrder.cf_order_id}`);
+        console.log(`✅ Razorpay order created → ${rzpOrder.id}`);
 
         // Store order data so verify-payment can access it later
         pendingOrders.set(bodhiOrderId, {
             name, phone: sanitizedPhone, address, items, total,
             customerNotes: customerNotes || '',
-            cfOrderId: cfOrder.cf_order_id,
+            rzpOrderId: rzpOrder.id,
             _created: Date.now(),
         });
 
-        // Return everything the frontend Cashfree SDK needs
+        // Return everything the frontend Razorpay SDK needs
         return res.status(200).json({
-            success:          true,
-            paymentSessionId: cfOrder.payment_session_id,
+            success:      true,
+            razorpayOrderId: rzpOrder.id,
+            razorpayKeyId:   RAZORPAY_KEY_ID,
             bodhiOrderId,
-            cfOrderId:        cfOrder.cf_order_id,
-            amount:           calculatedTotal,
-            currency:         'INR',
+            amount:       toPaise(calculatedTotal),
+            currency:     'INR',
         });
 
     } catch (err) {
-        const errMsg = err?.response?.data?.message || err.message;
-        console.error(`❌ Cashfree order creation failed: ${errMsg}`);
+        const errMsg = err?.error?.description || err.message;
+        console.error(`❌ Razorpay order creation failed: ${errMsg}`);
         return res.status(500).json({ success: false, message: 'Could not initiate payment. Please try again.' });
     }
 });
 
 // -- 7. ROUTE: VERIFY PAYMENT + FULFIL ORDER ------------------
-// Called AFTER Cashfree payment completes (redirect or frontend poll).
-// Fetches order status from Cashfree API to confirm payment is real.
+// Called AFTER Razorpay payment completes (popup callback).
+// Verifies HMAC signature to confirm payment is authentic.
 app.post('/api/verify-payment', orderLimiter, async (req, res) => {
-    const { bodhiOrderId } = req.body;
+    const { bodhiOrderId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    if (!bodhiOrderId) {
-        return res.status(400).json({ success: false, message: 'Missing order ID.' });
+    if (!bodhiOrderId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ success: false, message: 'Missing payment details.' });
     }
 
-    if (!cashfreeConfigured) {
+    if (!razorpay) {
         return res.status(503).json({ success: false, message: 'Payment system not configured.' });
     }
 
     try {
-        // 7a. Fetch order status from Cashfree (server-to-server — cannot be faked)
-        const cfResponse = await Cashfree.PGFetchOrder(bodhiOrderId);
-        const cfOrder = cfResponse.data;
+        // 7a. Verify HMAC signature (server-side — cannot be faked)
+        const expectedSignature = crypto
+            .createHmac('sha256', RAZORPAY_KEY_SECRET)
+            .update(razorpay_order_id + '|' + razorpay_payment_id)
+            .digest('hex');
 
-        if (cfOrder.order_status !== 'PAID') {
-            console.error(`❌ Payment not completed for ${bodhiOrderId} — status: ${cfOrder.order_status}`);
-            return res.status(400).json({ success: false, message: `Payment status: ${cfOrder.order_status}. Please try again.` });
+        if (expectedSignature !== razorpay_signature) {
+            console.error(`❌ Signature mismatch for ${bodhiOrderId}`);
+            return res.status(400).json({ success: false, message: 'Payment verification failed. Signature mismatch.' });
         }
 
         // 7b. Get stored order data
@@ -372,9 +358,9 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
         }
 
         const { name, phone, address, items, total, customerNotes } = orderData;
-        const paymentId = cfOrder.cf_order_id || bodhiOrderId;
+        const paymentId = razorpay_payment_id;
 
-        console.log(`✅ Payment verified → ${bodhiOrderId} | Cashfree: ${paymentId}`);
+        console.log(`✅ Payment verified → ${bodhiOrderId} | Razorpay: ${paymentId}`);
 
         // 7c. Log to Google Sheet (status = "Paid")
         await pushToSheet({
@@ -404,27 +390,9 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
         });
 
     } catch (err) {
-        const errMsg = err?.response?.data?.message || err.message;
+        const errMsg = err?.error?.description || err.message;
         console.error(`❌ Payment verification failed for ${bodhiOrderId}: ${errMsg}`);
         return res.status(500).json({ success: false, message: 'Payment verification failed. Please contact us.' });
-    }
-});
-
-// -- 7b. ROUTE: PAYMENT RETURN URL (GET) ------------------
-// Cashfree redirects here after checkout; we verify then redirect to success page
-app.get('/api/payment-return', async (req, res) => {
-    const orderId = req.query.order_id;
-    if (!orderId || !cashfreeConfigured) {
-        return res.redirect('/?payment=error');
-    }
-    try {
-        const cfResponse = await Cashfree.PGFetchOrder(orderId);
-        if (cfResponse.data.order_status === 'PAID') {
-            return res.redirect(`/?payment=success&orderId=${encodeURIComponent(orderId)}`);
-        }
-        return res.redirect(`/?payment=failed&orderId=${encodeURIComponent(orderId)}`);
-    } catch {
-        return res.redirect(`/?payment=error&orderId=${encodeURIComponent(orderId)}`);
     }
 });
 
@@ -450,71 +418,64 @@ app.get('/api/bookings/slots', async (req, res) => {
     }
 });
 
-// ── POST: Create Cashfree order for booking ───────────────
+// ── POST: Create Razorpay order for booking ───────────────
 app.post('/api/create-booking', orderLimiter, async (req, res) => {
     const { name, phone, sessionName, sessionId, date, slot, price } = req.body;
     if (!name || !phone || !sessionId || !date || !slot || !price)
         return res.status(400).json({ success: false, message: 'Missing required fields.' });
-    if (!cashfreeConfigured)
+    if (!razorpay)
         return res.status(503).json({ success: false, message: 'Payment system not configured.' });
 
     const bookingId   = '#BDHB-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
     const sanitizedPhone = phone.replace(/\D/g, '');
-    const returnUrl = `${ALLOWED_ORIGIN === '*' ? 'https://bodhisatvvam.onrender.com' : ALLOWED_ORIGIN}/booking.html?payment=success&bookingId=${encodeURIComponent(bookingId)}`;
     console.log(`📅 Creating booking | ${bookingId} | ${sessionName} | ${date} ${slot}`);
 
     try {
-        const cfRequest = {
-            order_amount:   price,
-            order_currency: 'INR',
-            order_id:       bookingId,
-            customer_details: {
-                customer_id:    sanitizedPhone,
-                customer_phone: sanitizedPhone,
-                customer_name:  name,
-            },
-            order_meta: {
-                return_url: returnUrl,
-            },
-            order_note: `Booking: ${sessionName} on ${date} at ${slot}`,
-        };
-
-        const cfResponse = await Cashfree.PGCreateOrder(cfRequest);
-        const cfOrder = cfResponse.data;
+        const rzpOrder = await razorpay.orders.create({
+            amount:   toPaise(price),
+            currency: 'INR',
+            receipt:  bookingId,
+            notes:    { bookingId, sessionName, date, slot },
+        });
 
         // Store booking data for verification step
         pendingOrders.set(bookingId, {
             name, phone: sanitizedPhone, sessionId, sessionName,
             date, slot, price, email: req.body.email || '', notes: req.body.notes || '',
+            rzpOrderId: rzpOrder.id,
             _created: Date.now(),
         });
 
         return res.status(200).json({
-            success: true, paymentSessionId: cfOrder.payment_session_id,
-            bookingId, amount: price, currency: 'INR',
+            success: true,
+            razorpayOrderId: rzpOrder.id,
+            razorpayKeyId:   RAZORPAY_KEY_ID,
+            bookingId, amount: toPaise(price), currency: 'INR',
         });
     } catch (err) {
-        const errMsg = err?.response?.data?.message || err.message;
-        console.error('Booking Cashfree error:', errMsg);
+        const errMsg = err?.error?.description || err.message;
+        console.error('Booking Razorpay error:', errMsg);
         return res.status(500).json({ success: false, message: 'Could not initiate payment.' });
     }
 });
 
 // ── POST: Verify payment + confirm booking ────────────────
 app.post('/api/verify-booking', orderLimiter, async (req, res) => {
-    const { bookingId } = req.body;
+    const { bookingId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    if (!bookingId || !cashfreeConfigured) {
+    if (!bookingId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !razorpay) {
         return res.status(400).json({ success: false, message: 'Missing booking ID or payment not configured.' });
     }
 
     try {
-        // Fetch order status from Cashfree
-        const cfResponse = await Cashfree.PGFetchOrder(bookingId);
-        const cfOrder = cfResponse.data;
+        // Verify HMAC signature
+        const expectedSignature = crypto
+            .createHmac('sha256', RAZORPAY_KEY_SECRET)
+            .update(razorpay_order_id + '|' + razorpay_payment_id)
+            .digest('hex');
 
-        if (cfOrder.order_status !== 'PAID') {
-            console.error(`Booking payment not completed -- ${bookingId} — status: ${cfOrder.order_status}`);
+        if (expectedSignature !== razorpay_signature) {
+            console.error(`Booking signature mismatch -- ${bookingId}`);
             return res.status(400).json({ success: false, message: 'Payment verification failed.' });
         }
 
@@ -525,7 +486,7 @@ app.post('/api/verify-booking', orderLimiter, async (req, res) => {
         }
 
         const { name, phone: sanitizedPhone, email, notes, sessionId, sessionName, date, slot, price } = bookingData;
-        const paymentId = cfOrder.cf_order_id || bookingId;
+        const paymentId = razorpay_payment_id;
 
         console.log(`✅ Booking verified --> ${bookingId}`);
 
@@ -600,7 +561,7 @@ app.post('/api/verify-booking', orderLimiter, async (req, res) => {
 
         return res.status(200).json({ success: true, bookingId, message: 'Booking confirmed!' });
     } catch (err) {
-        const errMsg = err?.response?.data?.message || err.message;
+        const errMsg = err?.error?.description || err.message;
         console.error(`Booking verification failed for ${bookingId}: ${errMsg}`);
         return res.status(500).json({ success: false, message: 'Payment verification failed. Please contact us.' });
     }
@@ -1231,7 +1192,7 @@ app.get('/health', (req, res) => {
         env: {
             whatsapp:    !!WHATSAPP_TOKEN,
             googleSheet: !!GOOGLE_SCRIPT_URL,
-            cashfree:    cashfreeConfigured,
+            razorpay:    !!razorpay,
             supabase:    sbSync.isConfigured,
             cors:        ALLOWED_ORIGIN,
         },
@@ -1624,7 +1585,7 @@ async function checkAbandonedCarts() {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
-    console.log(`   Cashfree  : ${cashfreeConfigured ? '✅ configured' : '❌ not set'}`);
+    console.log(`   Razorpay  : ${razorpay ? '✅ configured' : '❌ not set'}`);
     console.log(`   WhatsApp  : ${WHATSAPP_TOKEN ? '✅ configured' : '❌ not set'}`);
     console.log(`   Sheet     : ${GOOGLE_SCRIPT_URL ? '✅ configured' : '❌ not set'}`);
     console.log(`   Supabase  : ${sbSync.isConfigured ? '✅ configured' : '❌ not set'}`);

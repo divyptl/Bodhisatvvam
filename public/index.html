@@ -1849,26 +1849,19 @@ function showSuccess(orderId) {
   }, 300);
 }
 
-// ── CASHFREE PAYMENT FLOW ─────────────────────────────────────
-// Step 1: Validate form → ask server to create a Cashfree order
-// Step 2: Open Cashfree checkout modal
-// Step 3: On return → verify payment status on server → log to Sheet + WhatsApp
-
-// Initialize Cashfree JS SDK lazily
-let cashfreeSDK = null;
+// ── RAZORPAY PAYMENT FLOW ─────────────────────────────────────────
+// Step 1: Validate form → ask server to create a Razorpay order
+// Step 2: Open Razorpay checkout popup
+// Step 3: On success callback → verify payment on server → log to Sheet + WhatsApp
 
 async function placeOrder() {
   if (!validateForm()) return;
-
-  if (!cashfreeSDK) {
-    cashfreeSDK = Cashfree({ mode: 'sandbox' });
-  }
 
   const orderData = collectOrderData();
   setBtn('⏳ Initiating Payment…', true);
 
   try {
-    // STEP 1 — Create Cashfree order on the server
+    // STEP 1 — Create Razorpay order on the server
     const createRes  = await fetch(`${API_BASE}/api/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1882,44 +1875,59 @@ async function placeOrder() {
       return;
     }
 
-    // Store order ID for verification after checkout
     const bodhiOrderId = createData.bodhiOrderId;
 
+    // STEP 2 — Open Razorpay checkout popup
+    const options = {
+      key: createData.razorpayKeyId,
+      amount: createData.amount,
+      currency: createData.currency,
+      name: 'Shree Bodhisatvvam',
+      description: 'Order ' + bodhiOrderId,
+      order_id: createData.razorpayOrderId,
+      handler: async function (response) {
+        // STEP 3 — Payment completed — verify on server
+        setBtn('⏳ Confirming Payment…', true);
+        try {
+          const verifyRes = await fetch(`${API_BASE}/api/verify-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              bodhiOrderId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyRes.ok && verifyData.success) {
+            showSuccess(verifyData.orderId);
+          } else {
+            setCheckoutError(verifyData.message || 'Payment status unclear. Please WhatsApp us with order ID: ' + bodhiOrderId);
+          }
+        } catch (err) {
+          console.error('Verify failed:', err.message);
+          setCheckoutError('Payment done but confirmation failed. Please WhatsApp us with order: ' + bodhiOrderId);
+        } finally {
+          setBtn('💳 Pay Now', false);
+        }
+      },
+      prefill: {
+        name: orderData.name,
+        contact: orderData.phone,
+      },
+      theme: { color: '#1c3a28' },
+      modal: {
+        ondismiss: function () {
+          setCheckoutError('Payment was cancelled. You can try again.');
+          setBtn('💳 Pay Now', false);
+        },
+      },
+    };
+
     setBtn('💳 Pay Now', false);
-
-    // STEP 2 — Open Cashfree checkout modal
-    const result = await cashfreeSDK.checkout({
-      paymentSessionId: createData.paymentSessionId,
-      redirectTarget:   '_modal',
-    });
-
-    if (result.error) {
-      setCheckoutError('Payment was cancelled. You can try again.');
-      setBtn('💳 Pay Now', false);
-      return;
-    }
-
-    // STEP 3 — Payment completed — verify on server
-    setBtn('⏳ Confirming Payment…', true);
-    try {
-      const verifyRes  = await fetch(`${API_BASE}/api/verify-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bodhiOrderId }),
-      });
-      const verifyData = await verifyRes.json();
-
-      if (verifyRes.ok && verifyData.success) {
-        showSuccess(verifyData.orderId);
-      } else {
-        setCheckoutError(verifyData.message || 'Payment status unclear. Please WhatsApp us with order ID: ' + bodhiOrderId);
-      }
-    } catch (err) {
-      console.error('Verify failed:', err.message);
-      setCheckoutError('Payment done but confirmation failed. Please WhatsApp us with order: ' + bodhiOrderId);
-    } finally {
-      setBtn('💳 Pay Now', false);
-    }
+    const rzp = new Razorpay(options);
+    rzp.open();
 
   } catch (err) {
     console.error('Payment init failed:', err.message);
@@ -2229,7 +2237,7 @@ function checkBundleImport() {
 .cart-btn.cart-bump { animation: cartBump 0.4s ease; }
 </style>
 
-<!-- Cashfree Checkout SDK -->
-<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+<!-- Razorpay Checkout SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>
 </html>
