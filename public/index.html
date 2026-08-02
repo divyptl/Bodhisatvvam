@@ -9,7 +9,7 @@
 ════════════════════════════════════════════════════ -->
 
 <!-- Primary SEO -->
-<title>Bodhisatvvam — Handcrafted Wellness Products & Life Coaching | Neepa Patel</title>
+<title>Shree Bodhisatvvam — Handcrafted Wellness Products & Life Coaching | Neepa Patel</title>
 <meta name="description" content="Shree Bodhisatvvam by Neepa Patel - handcrafted aromatherapy salts, intention candles & one-on-one wellness coaching sessions. Life Coaching, NLP Training & Mindfulness. Shop online, delivered across India.">
 <meta name="keywords" content="wellness products, life coaching, NLP coaching, handcrafted candles, aromatherapy salts, mindfulness coaching, Neepa Patel, Bodhisatvvam, holistic wellness India, stress relief">
 <meta name="author" content="Neepa Patel — Shree Bodhisatvvam">
@@ -998,7 +998,7 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <nav id="mainNav">
-  <a href="#" class="nav-logo">Bodhisatvvam</a>
+  <a href="#" class="nav-logo">Shree Bodhisatvvam</a>
   <ul class="nav-links">
     <li><a href="#products">Shop</a></li>
     <li><a href="/bundle.html">Bundles</a></li>
@@ -1084,7 +1084,7 @@
   <div class="about-content fade-in-up">
     <div class="section-tag">Our Philosophy</div>
     <h2 class="section-title" style="font-size:clamp(2rem,3vw,3rem); margin-bottom:28px">We believe in wellness and<br>the power to <em>transform.</em></h2>
-    <p>At Bodhisatvvam, we focus on revitalizing your mental strength, emotional well-being, and physical health. Whether through one-on-one life coaching or our handcrafted wellness products, our goal is to help you overcome fear, anxiety, and negativity.</p>
+    <p>At Shree Bodhisatvvam, we focus on revitalizing your mental strength, emotional well-being, and physical health. Whether through one-on-one life coaching or our handcrafted wellness products, our goal is to help you overcome fear, anxiety, and negativity.</p>
     <div class="about-pillars">
       <div class="pillar">
         <span class="pillar-icon">✨</span>
@@ -1225,7 +1225,7 @@
     </div>
     <div class="testimonial-card">
       <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
-      <p class="testimonial-text">"I've been using the Money Attract Salt for 3 months now. The financial blocks I was facing have slowly but surely dissolved. Highly recommend Bodhisatvvam."</p>
+      <p class="testimonial-text">"I've been using the Money Attract Salt for 3 months now. The financial blocks I was facing have slowly but surely dissolved. Highly recommend Shree Bodhisatvvam."</p>
       <div class="testimonial-author">
         <div class="testimonial-avatar">V</div>
         <div><div class="testimonial-name">Vikram P.</div><div class="testimonial-location">Delhi, NCR</div></div>
@@ -1243,7 +1243,7 @@
 <footer id="contact">
   <div class="footer-grid">
     <div>
-      <div class="footer-brand">Bodhisatvvam</div>
+      <div class="footer-brand">Shree Bodhisatvvam</div>
       <p class="footer-tagline">Empower Your Wellness & Transform Your Life. Guided by Neepa Patel, Life Coach & Wellness Expert.</p>
     </div>
     <div>
@@ -1373,7 +1373,7 @@
     <span class="success-icon">✨</span>
     <div class="success-title">Request Received!</div>
     <p class="success-msg">
-      Thank you for choosing Bodhisatvvam.<br><br>
+      Thank you for choosing Shree Bodhisatvvam.<br><br>
       Your order details have been securely captured. We will reach out to you on WhatsApp shortly to confirm everything.
     </p>
     <div class="success-order-id" id="successOrderId">#BDH-00000</div>
@@ -1838,6 +1838,15 @@ function validateForm() {
 }
 
 function showSuccess(orderId) {
+  try {
+    let history = JSON.parse(localStorage.getItem('bodhi_order_history')) || [];
+    const phone = document.getElementById('checkoutPhone').value.trim();
+    if (!history.find(h => h.id === orderId)) {
+      history.push({ id: orderId, phone: phone.replace(/\D/g, ''), date: Date.now(), type: 'shop' });
+      localStorage.setItem('bodhi_order_history', JSON.stringify(history));
+    }
+  } catch(e) {}
+
   document.getElementById('successOrderId').textContent = orderId || '#BDH-????';
   closeCheckout();
   setTimeout(() => {
@@ -2074,12 +2083,12 @@ function qvGoTo(idx) {
 const _categoryLabels = { all: 'All Products', salts: 'Aromatherapy Salts', candles: 'Intention Candles', healing: 'Personal Wellness Coaching' };
 function updatePageMeta(filter) {
   const label = _categoryLabels[filter] || 'Shop';
-  document.title = `${label} — Bodhisatvvam | Handcrafted Wellness Products & Life Coaching`;
+  document.title = `${label} — Shree Bodhisatvvam | Handcrafted Wellness Products & Life Coaching`;
   const desc = document.querySelector('meta[name="description"]');
   if (desc && filter !== 'all') {
     const descMap = {
       salts:   'Browse our handcrafted aromatherapy salts — Protection, Love, Prosperity & more. Handcrafted by Neepa Patel.',
-      candles: 'Explore Bodhisatvvam\'s handcrafted intention candles — crafted with specific intentions to manifest your desires.',
+      candles: 'Explore Shree Bodhisatvvam\'s handcrafted intention candles — crafted with specific intentions to manifest your desires.',
       healing: 'Book a one-on-one personal wellness coaching session with Neepa Patel — Life Coaching, NLP Training & Mindfulness.'
     };
     desc.setAttribute('content', descMap[filter] || desc.getAttribute('content'));

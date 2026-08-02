@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Book a Wellness Session — Bodhisatvvam</title>
+<title>Book a Wellness Session — Shree Bodhisatvvam</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -790,6 +790,15 @@ async function bookSession() {
           const verifyData = await verifyRes.json();
 
           if (verifyRes.ok && verifyData.success) {
+            try {
+              let history = JSON.parse(localStorage.getItem('bodhi_order_history')) || [];
+              const phone = document.getElementById('bookPhone').value.trim();
+              if (!history.find(h => h.id === verifyData.bookingId)) {
+                history.push({ id: verifyData.bookingId, phone: phone.replace(/\D/g, ''), date: Date.now(), type: 'booking' });
+                localStorage.setItem('bodhi_order_history', JSON.stringify(history));
+              }
+            } catch(e) {}
+
             document.getElementById('successId').textContent = verifyData.bookingId;
             document.getElementById('successDetail').textContent =
               `Your ${selectedSession.name} session is confirmed for ${formatDisplayDate(selectedDate)} at ${selectedSlot} IST. ` +

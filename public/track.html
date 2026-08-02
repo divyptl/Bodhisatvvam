@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Track Your Order — Bodhisatvvam</title>
+<title>Track Your Order — Shree Bodhisatvvam</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -110,6 +110,22 @@
   .delivery-info { margin-top: 24px; padding: 16px 20px; background: var(--cream); font-size: 0.85rem; color: var(--text-mid); line-height: 1.6; }
   .delivery-info strong { color: var(--forest); }
 
+  /* History Cards */
+  .history-section { margin-bottom: 24px; }
+  .history-card {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px; border: 1px solid var(--cream-dark); background: white;
+    margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s;
+  }
+  .history-card:hover { border-color: var(--forest); }
+  .history-id { font-weight: 600; color: var(--forest); }
+  .history-date { font-size: 0.8rem; color: var(--text-light); margin-top: 4px; }
+  .history-type { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; background: var(--cream); padding: 4px 8px; border-radius: 2px; }
+  .or-divider { text-align: center; margin: 32px 0; color: var(--text-light); font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; position: relative; }
+  .or-divider::before, .or-divider::after { content: ''; position: absolute; top: 50%; width: 35%; height: 1px; background: var(--cream-dark); }
+  .or-divider::before { left: 0; }
+  .or-divider::after { right: 0; }
+
   @media (max-width: 600px) {
     .container { margin: 32px auto; }
     .page-title { font-size: 2rem; }
@@ -121,13 +137,19 @@
 <body>
 
 <div class="top-bar">
-  <a class="top-logo" href="/">Bodhi<span>satvvam</span></a>
+  <a class="top-logo" href="/">Shree Bodhi<span>satvvam</span></a>
   <a href="/">← Back to Shop</a>
 </div>
 
 <div class="container">
   <h1 class="page-title">Track Your Order</h1>
-  <p class="page-sub">Enter your Order ID and phone number to check your order status.</p>
+  <p class="page-sub">Select a recent order or enter your details below.</p>
+
+  <div id="recentOrdersSection" class="history-section" style="display:none;">
+    <label class="field-label">Your Recent Orders</label>
+    <div id="recentOrdersList"></div>
+    <div class="or-divider">OR TRACK MANUALLY</div>
+  </div>
 
   <div class="search-card">
     <label class="field-label" for="trackOrderId">Order ID</label>
@@ -171,6 +193,62 @@
 
 <script>
 const API_BASE = window.location.origin;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  let orders = [];
+  
+  // Try fetching from API if logged in
+  const token = localStorage.getItem('bodhi_customer_token');
+  if (token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/history`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const combined = [
+          ...data.orders.map(o => ({id: o.order_id, date: new Date(o.created_at).getTime(), phone: o.phone, type: 'shop'})),
+          ...data.bookings.map(b => ({id: b.booking_id, date: new Date(b.created_at).getTime(), phone: b.phone, type: 'booking'}))
+        ];
+        orders = combined;
+      }
+    } catch(e) {}
+  }
+
+  // Fallback to local storage if API empty or not logged in
+  if (orders.length === 0) {
+    try {
+      orders = JSON.parse(localStorage.getItem('bodhi_order_history')) || [];
+    } catch(e) {}
+  }
+
+  if (orders.length > 0) {
+    // deduplicate by id
+    const uniqueOrders = Array.from(new Map(orders.map(item => [item.id, item])).values());
+    uniqueOrders.sort((a,b) => b.date - a.date);
+    
+    const list = document.getElementById('recentOrdersList');
+    uniqueOrders.slice(0, 5).forEach(o => {
+      const div = document.createElement('div');
+      div.className = 'history-card';
+      const d = new Date(o.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      div.innerHTML = `
+        <div>
+          <div class="history-id">${o.id}</div>
+          <div class="history-date">${d}</div>
+        </div>
+        <div class="history-type">${o.type || 'order'}</div>
+      `;
+      div.onclick = () => {
+        document.getElementById('trackOrderId').value = o.id;
+        document.getElementById('trackPhone').value = o.phone;
+        trackOrder();
+      };
+      list.appendChild(div);
+    });
+    document.getElementById('recentOrdersSection').style.display = 'block';
+  }
+});
 
 async function trackOrder() {
   const orderId = document.getElementById('trackOrderId').value.trim();

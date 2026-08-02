@@ -1187,7 +1187,7 @@ app.post('/api/admin/site-content/update-all', requireAdmin, (req, res) => {
 app.get('/health', (req, res) => {
     res.status(200).json({
         status:    'ok',
-        service:   'Bodhisatvvam Backend',
+        service:   'Shree Bodhisatvvam Backend',
         timestamp: new Date().toISOString(),
         env: {
             whatsapp:    !!WHATSAPP_TOKEN,
@@ -1406,7 +1406,7 @@ async function generateReviewTokens(orderId) {
                 `Your order ${orderId} has been delivered! ✨\n\n` +
                 `We'd love to hear about your experience:\n\n` +
                 reviewLinks.join('\n') + `\n\n` +
-                `_Thank you for choosing Bodhisatvvam_ 🌸`;
+                `_Thank you for choosing Shree Bodhisatvvam_ 🌸`;
             try {
                 await axios.post(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
                     { messaging_product: 'whatsapp', to: '+' + order.phone, type: 'text', text: { body: msg } },
