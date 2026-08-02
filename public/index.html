@@ -185,6 +185,8 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
     display: flex; align-items: center; justify-content: space-between;
     padding: 22px 60px;
+    background: rgba(245,239,227,0.96);
+    backdrop-filter: blur(16px);
     transition: background 0.4s, padding 0.4s, box-shadow 0.4s;
   }
   nav.scrolled {
@@ -456,7 +458,7 @@
   /* ── PRODUCTS ── */
   .products-section { padding: 100px 60px; }
   .products-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 60px; }
-  .products-header-left { max-width: 550px; }
+  .products-header-left { max-width: 850px; }
   .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 32px; }
   .filter-tab {
     padding: 8px 20px; border: 1px solid var(--cream-dark);
