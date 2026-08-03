@@ -52,6 +52,8 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark
 .p-card-id{font-size:.65rem;color:var(--text-light);position:absolute;top:8px;left:8px;background:rgba(255,255,255,.9);padding:2px 6px}
 .p-card-actions{display:flex;gap:6px;margin-top:12px;border-top:1px solid var(--cream-dark);padding-top:12px}
 .p-card-actions .btn{flex:1;text-align:center}
+.p-card-checkbox{position:absolute;top:8px;left:48px;background:rgba(255,255,255,0.9);padding:2px 4px;border-radius:2px;cursor:pointer;z-index:10;display:flex;align-items:center;}
+.p-card-checkbox input{cursor:pointer;width:14px;height:14px;}
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(28,58,40,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
@@ -102,12 +104,16 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark
 <div class="page-header">
   <h1 class="page-title">📦 Product Manager</h1>
   <div class="header-actions">
+    <button class="btn btn-danger" id="bulkDeleteBtn" style="display:none" onclick="openBulkDeleteModal()">🗑️ Delete Selected (<span id="bulkCount">0</span>)</button>
     <button class="btn btn-amber" onclick="openAddModal()">+ Add Product</button>
     <button class="btn btn-outline" onclick="loadProducts()">↻ Refresh</button>
   </div>
 </div>
 
 <div class="controls">
+  <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;color:var(--text-mid);margin-right:8px;">
+    <input type="checkbox" id="selectAllCb" onchange="toggleSelectAll()"> Select All
+  </label>
   <input type="text" id="searchProd" placeholder="🔍 Search products..." oninput="filterRender()">
   <select id="catFilter" onchange="filterRender()">
     <option value="">All Categories</option>
@@ -166,7 +172,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--text-dark
       <p id="deleteMsg" style="color:var(--text-mid);margin-bottom:24px"></p>
       <div style="display:flex;gap:12px;justify-content:center">
         <button class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
-        <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
       </div>
     </div>
   </div>
@@ -179,6 +185,7 @@ const API_BASE = '';
 let allProducts = [];
 let allCategories = [];
 let deleteTargetId = null;
+let bulkDeleteIds = [];
 
 function getToken() { return sessionStorage.getItem('bdh_token') || prompt('Enter admin token:') || ''; }
 
@@ -218,12 +225,15 @@ function filterRender() {
   });
   document.getElementById('prodCount').textContent = `${list.length} of ${allProducts.length} products`;
   const grid = document.getElementById('productsGrid');
-  if (!list.length) { grid.innerHTML = '<div class="empty-state"><span>🌿</span>No products found.</div>'; return; }
+  if (!list.length) { grid.innerHTML = '<div class="empty-state"><span>🌿</span>No products found.</div>'; updateBulkUI(); return; }
   grid.innerHTML = list.map(p => {
     const imgSrc = p.images && p.images.length ? `<img src="${p.images[0]}" alt="${p.name}">` : p.emoji || '📦';
     const hasImg = p.images && p.images.length;
     return `<div class="p-card">
       <span class="p-card-id">#${p.id}</span>
+      <label class="p-card-checkbox" title="Select product">
+        <input type="checkbox" class="prod-cb" value="${p.id}" onchange="updateBulkUI()">
+      </label>
       <div class="p-card-img">${hasImg ? imgSrc : `<span>${p.emoji||'📦'}</span>`}</div>
       ${p.badge ? `<span class="p-card-badge">${p.badge}</span>` : ''}
       <div class="p-card-body">
@@ -238,6 +248,38 @@ function filterRender() {
       </div>
     </div>`;
   }).join('');
+  updateBulkUI();
+}
+
+function toggleSelectAll() {
+  const isChecked = document.getElementById('selectAllCb').checked;
+  const checkboxes = document.querySelectorAll('.prod-cb');
+  checkboxes.forEach(cb => cb.checked = isChecked);
+  updateBulkUI();
+}
+
+function updateBulkUI() {
+  const checkboxes = document.querySelectorAll('.prod-cb');
+  const checked = Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+  bulkDeleteIds = checked;
+  
+  const selectAllCb = document.getElementById('selectAllCb');
+  if (checkboxes.length > 0) {
+    selectAllCb.checked = checked.length === checkboxes.length;
+    selectAllCb.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+  } else {
+    selectAllCb.checked = false;
+    selectAllCb.indeterminate = false;
+  }
+
+  const bulkBtn = document.getElementById('bulkDeleteBtn');
+  const bulkCount = document.getElementById('bulkCount');
+  if (checked.length > 0) {
+    bulkBtn.style.display = 'inline-block';
+    bulkCount.textContent = checked.length;
+  } else {
+    bulkBtn.style.display = 'none';
+  }
 }
 
 function openAddModal() {
@@ -312,6 +354,13 @@ function openDeleteModal(id) {
   deleteTargetId = id;
   const p = allProducts.find(x => x.id === id);
   document.getElementById('deleteMsg').textContent = `Are you sure you want to delete "${p ? p.name : id}"?`;
+  document.getElementById('confirmDeleteBtn').onclick = confirmDelete;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function openBulkDeleteModal() {
+  if (bulkDeleteIds.length === 0) return;
+  document.getElementById('deleteMsg').textContent = `Are you sure you want to delete ${bulkDeleteIds.length} selected products?`;
+  document.getElementById('confirmDeleteBtn').onclick = confirmBulkDelete;
   document.getElementById('deleteModal').classList.add('open');
 }
 function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); deleteTargetId = null; }
@@ -323,6 +372,24 @@ async function confirmDelete() {
     const res = await fetch(API_BASE + '/api/admin/products/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token, id:deleteTargetId}) });
     const data = await res.json();
     if (data.success) { toast('✅ Product deleted'); closeDeleteModal(); loadProducts(); }
+    else { toast('❌ ' + (data.message || 'Failed')); }
+  } catch(e) { toast('❌ Connection error'); }
+}
+
+async function confirmBulkDelete() {
+  if (bulkDeleteIds.length === 0) return;
+  const token = getToken();
+  try {
+    const res = await fetch(API_BASE + '/api/admin/products/bulk-delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token, ids:bulkDeleteIds}) });
+    const data = await res.json();
+    if (data.success) { 
+      toast('✅ ' + data.message); 
+      closeDeleteModal(); 
+      bulkDeleteIds = [];
+      document.getElementById('selectAllCb').checked = false;
+      document.getElementById('selectAllCb').indeterminate = false;
+      loadProducts(); 
+    }
     else { toast('❌ ' + (data.message || 'Failed')); }
   } catch(e) { toast('❌ Connection error'); }
 }

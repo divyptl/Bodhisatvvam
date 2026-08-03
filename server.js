@@ -900,6 +900,33 @@ app.post('/api/admin/products/delete', requireAdmin, (req, res) => {
     res.status(200).json({ success: true, message: `"${product.name}" has been deleted.` });
 });
 
+// ── POST: Bulk Delete products (admin only) ──
+app.post('/api/admin/products/bulk-delete', requireAdmin, (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: 'Array of product IDs is required.' });
+    }
+
+    let products = readProducts();
+    const idSet = new Set(ids.map(id => parseInt(id)));
+    
+    // Count how many products will actually be deleted
+    const productsToDelete = products.filter(p => idSet.has(p.id));
+    if (productsToDelete.length === 0) {
+        return res.status(404).json({ success: false, message: 'No matching products found to delete.' });
+    }
+
+    // Keep only products not in the idSet
+    products = products.filter(p => !idSet.has(p.id));
+    writeProducts(products);
+
+    // Sync all deletes to Supabase
+    productsToDelete.forEach(p => sbSync.syncProduct(p.id, 'delete'));
+
+    console.log(`🗑️ Bulk deleted ${productsToDelete.length} products (IDs: ${Array.from(idSet).join(', ')})`);
+    res.status(200).json({ success: true, message: `${productsToDelete.length} products have been deleted.` });
+});
+
 // ── POST: Upload image(s) for a product (admin only) ──
 app.post('/api/admin/products/:id/upload-image',
     requireAdmin,
