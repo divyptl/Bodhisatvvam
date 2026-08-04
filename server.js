@@ -884,7 +884,7 @@ app.post('/api/admin/products/edit', requireAdmin, (req, res) => {
 });
 
 // ── POST: Delete a product (admin only) ──
-app.post('/api/admin/products/delete', requireAdmin, (req, res) => {
+app.post('/api/admin/products/delete', requireAdmin, async (req, res) => {
     const { id } = req.body;
     if (!id) return res.status(400).json({ success: false, message: 'Product ID is required.' });
 
@@ -894,14 +894,14 @@ app.post('/api/admin/products/delete', requireAdmin, (req, res) => {
 
     products = products.filter(p => p.id !== parseInt(id));
     writeProducts(products);
-    sbSync.syncProduct(parseInt(id), 'delete'); // Background sync
+    await sbSync.syncProduct(parseInt(id), 'delete'); // Await to ensure Supabase delete completes
 
     console.log(`🗑️ Product deleted: ${product.name} (ID: ${id})`);
     res.status(200).json({ success: true, message: `"${product.name}" has been deleted.` });
 });
 
 // ── POST: Bulk Delete products (admin only) ──
-app.post('/api/admin/products/bulk-delete', requireAdmin, (req, res) => {
+app.post('/api/admin/products/bulk-delete', requireAdmin, async (req, res) => {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ success: false, message: 'Array of product IDs is required.' });
@@ -920,8 +920,8 @@ app.post('/api/admin/products/bulk-delete', requireAdmin, (req, res) => {
     products = products.filter(p => !idSet.has(p.id));
     writeProducts(products);
 
-    // Sync all deletes to Supabase
-    productsToDelete.forEach(p => sbSync.syncProduct(p.id, 'delete'));
+    // Await all Supabase deletes to ensure they persist
+    await Promise.all(productsToDelete.map(p => sbSync.syncProduct(p.id, 'delete')));
 
     console.log(`🗑️ Bulk deleted ${productsToDelete.length} products (IDs: ${Array.from(idSet).join(', ')})`);
     res.status(200).json({ success: true, message: `${productsToDelete.length} products have been deleted.` });
@@ -1618,19 +1618,11 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log(`   Supabase  : ${sbSync.isConfigured ? '✅ configured' : '❌ not set'}`);
     console.log(`   CORS      : ${ALLOWED_ORIGIN}`);
 
-    // TEMPORARY FIX: Push new compliant data to Supabase to overwrite old db rows!
+    // Pull persistent data from Supabase on startup.
+    // Supabase is the source of truth — local JSON files are ephemeral on Render.
+    // This restores products, categories, site content, and customers that were
+    // modified (added/edited/deleted) via the admin panel since the last deploy.
     if (sbSync.isConfigured) {
-        console.log('🚀 Force pushing local JSON to Supabase to update live DB...');
-        const content = readSiteContent();
-        await sbSync.syncAllSiteContent(content);
-        
-        const products = readProducts();
-        await sbSync.syncBulkProducts(products);
-        
-        const cats = readCategories();
-        await sbSync.syncAllCategories(cats);
-        
-        // After pushing, we resume normal pulling behavior for future restarts
         await sbSync.pullFromSupabase();
     }
 
