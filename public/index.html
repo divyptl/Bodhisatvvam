@@ -1515,7 +1515,13 @@ function changeSort(val) {
 
 function filterProducts(filter, btn) {
   currentFilter = filter;
-  visibleCount = PRODUCTS_PER_PAGE; // Reset to 12 when tab changes
+  // When filtering to a specific category, show all products in that category
+  // Only paginate when showing ALL products (100+ items)
+  if (filter === 'all') {
+    visibleCount = PRODUCTS_PER_PAGE;
+  } else {
+    visibleCount = 9999; // Show all in the selected category
+  }
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   updatePageMeta(filter);

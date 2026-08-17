@@ -47,6 +47,8 @@ const GOOGLE_SCRIPT_SECRET = process.env.GOOGLE_SCRIPT_SECRET;
 const ALLOWED_ORIGIN       = process.env.ALLOWED_ORIGIN || '*';
 const RAZORPAY_KEY_ID      = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET  = process.env.RAZORPAY_KEY_SECRET;
+const TELEGRAM_BOT_TOKEN   = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID     = process.env.TELEGRAM_CHAT_ID;
 
 // -- 2. RAZORPAY CLIENT -----------------------------------------------
 let razorpay = null;
@@ -251,6 +253,29 @@ async function sendWhatsApp(name, phone, orderId, items, total, address, custome
     }
 }
 
+// -- 5b. TELEGRAM NOTIFICATIONS (Free WhatsApp alternative) -----------
+// Sends instant push notifications to the owner's Telegram.
+// Setup: 1) Message @BotFather on Telegram → /newbot → get token
+//        2) Message @userinfobot → get your chat_id
+//        3) Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in env
+async function sendTelegramNotification(message) {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+    try {
+        await axios.post(
+            `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+            {
+                chat_id: TELEGRAM_CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown',
+            },
+            { timeout: 10000 }
+        );
+        console.log(`✅ Telegram notification sent`);
+    } catch (err) {
+        console.error(`❌ Telegram error: ${err.message}`);
+    }
+}
+
 // -- 6. ROUTE: CREATE RAZORPAY ORDER --------------------------------
 // Called when customer clicks "Pay Now" -- before payment happens.
 // Creates a Razorpay order and returns order_id + key to the frontend.
@@ -370,6 +395,19 @@ app.post('/api/verify-payment', orderLimiter, async (req, res) => {
 
         // 7d. Send WhatsApp confirmation
         await sendWhatsApp(name, phone, bodhiOrderId, items, total, address, customerNotes);
+
+        // 7d2. Send Telegram notification to owner (free alternative)
+        sendTelegramNotification(
+            `🛒 *New Order Received!*\n\n` +
+            `*Order ID:* ${bodhiOrderId}\n` +
+            `*Customer:* ${name}\n` +
+            `*Phone:* +${phone}\n` +
+            `*Items:*\n${formatItemsForWhatsApp(items)}\n` +
+            `*Total:* ${total}\n` +
+            `*Address:* ${address}\n` +
+            (customerNotes ? `*Notes:* ${customerNotes}\n` : '') +
+            `*Payment:* ${paymentId}`
+        ).catch(() => {});
 
         // 7e. Save order to Supabase (non-blocking)
         sbSync.saveOrder({
@@ -547,6 +585,19 @@ app.post('/api/verify-booking', orderLimiter, async (req, res) => {
                 console.log(`✅ Neepa WA sent --> ${bookingId}`);
             } catch (err) { console.error(`Neepa WA error: ${err.message}`); }
         }
+
+        // Telegram notification to owner (free alternative)
+        sendTelegramNotification(
+            `📅 *New Booking Confirmed!*\n\n` +
+            `*Booking ID:* ${bookingId}\n` +
+            `*Session:* ${sessionName}\n` +
+            `*Customer:* ${name}\n` +
+            `*Phone:* +${sanitizedPhone}\n` +
+            `*Date:* ${date} at ${slot} IST\n` +
+            `*Paid:* Rs.${price}\n` +
+            (notes ? `*Notes:* ${notes}\n` : '') +
+            `*Payment:* ${paymentId}`
+        ).catch(() => {});
 
         // Save booking to Supabase (non-blocking)
         sbSync.saveBooking({
@@ -1614,6 +1665,7 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
     console.log(`   Razorpay  : ${razorpay ? '✅ configured' : '❌ not set'}`);
     console.log(`   WhatsApp  : ${WHATSAPP_TOKEN ? '✅ configured' : '❌ not set'}`);
+    console.log(`   Telegram  : ${TELEGRAM_BOT_TOKEN ? '✅ configured' : '❌ not set'}`);
     console.log(`   Sheet     : ${GOOGLE_SCRIPT_URL ? '✅ configured' : '❌ not set'}`);
     console.log(`   Supabase  : ${sbSync.isConfigured ? '✅ configured' : '❌ not set'}`);
     console.log(`   CORS      : ${ALLOWED_ORIGIN}`);
