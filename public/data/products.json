@@ -638,6 +638,28 @@
     "images": []
   },
   {
+    "id": 212,
+    "name": "Tarot Reading",
+    "emoji": "🔮",
+    "category": "healing",
+    "desc": "Gain clarity and insight through an intuitive tarot card reading session.",
+    "price": 1100,
+    "rating": 5,
+    "badge": "",
+    "images": []
+  },
+  {
+    "id": 213,
+    "name": "Nadhi Jyotish",
+    "emoji": "🌟",
+    "category": "healing",
+    "desc": "Discover your life path through the ancient science of Nadhi astrology.",
+    "price": 1500,
+    "rating": 5,
+    "badge": "",
+    "images": []
+  },
+  {
     "id": 301,
     "name": "Releasing Fear",
     "emoji": "🕯️",
