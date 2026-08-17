@@ -85,11 +85,11 @@
 
   /* ── SESSION TYPES ── */
   .session-section {
-    max-width: 900px; margin: -40px auto 0;
+    max-width: 1100px; margin: -40px auto 0;
     padding: 0 40px; position: relative; z-index: 2;
   }
   .session-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
   }
   .session-card {
     background: white; border: 2px solid var(--cream-dark);
@@ -319,6 +319,9 @@
     font-size: 1.1rem; color: var(--amber); margin-bottom: 28px;
   }
 
+  @media (max-width: 1024px) {
+    .session-grid { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 768px) {
     nav { padding: 16px 24px; }
     .hero { padding: 40px 24px 60px; }
@@ -488,6 +491,8 @@ const SESSIONS = [
   { id: 'aura', name: 'Stress Relief & Mindfulness', icon: '🌿', desc: 'Deep relaxation and mindfulness practices for stress management.', price: 500, duration: '60 min' },
   { id: 'relationship', name: 'Relationship Coaching', icon: '💖', desc: 'Improve and restore harmony in your relationships.', price: 500, duration: '60 min' },
   { id: 'mental', name: 'Mental & Emotional Wellness', icon: '🧘', desc: 'Overcome anxiety, fear, stress and negativity.', price: 500, duration: '60 min' },
+  { id: 'tarot', name: 'Tarot Reading', icon: '🔮', desc: 'Gain clarity and insight through an intuitive tarot card reading session.', price: 1100, duration: '60 min' },
+  { id: 'nadhi', name: 'Nadhi Jyotish', icon: '🌟', desc: 'Discover your life path through the ancient science of Nadhi astrology.', price: 1500, duration: '60 min' },
   { id: 'group_meditation', name: 'Group Meditation', icon: '🧘‍♂️', desc: 'Join any 1 batch (5:00-5:30 AM or 9:30-10:00 AM).', price: 100, duration: '30 min' },
 ];
 
