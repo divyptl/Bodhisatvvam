@@ -259,7 +259,10 @@ async function sendWhatsApp(name, phone, orderId, items, total, address, custome
 //        2) Message @userinfobot → get your chat_id
 //        3) Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in env
 async function sendTelegramNotification(message) {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+        console.warn(`⚠️ Telegram ignored: Missing ${!TELEGRAM_BOT_TOKEN ? 'TELEGRAM_BOT_TOKEN' : ''} ${!TELEGRAM_CHAT_ID ? 'TELEGRAM_CHAT_ID' : ''}`);
+        return;
+    }
     try {
         await axios.post(
             `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -272,9 +275,27 @@ async function sendTelegramNotification(message) {
         );
         console.log(`✅ Telegram notification sent`);
     } catch (err) {
-        console.error(`❌ Telegram error: ${err.message}`);
+        console.error(`❌ Telegram API Error:`, err.response ? err.response.data : err.message);
     }
 }
+
+// -- 5c. TEST TELEGRAM NOTIFICATION (No payment required) -----------
+// You can visit /api/test-telegram in your browser to test if it works.
+app.get('/api/test-telegram', async (req, res) => {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Telegram is not fully configured in Render Environment Variables. Missing Token or Chat ID.' 
+        });
+    }
+    try {
+        await sendTelegramNotification(`🧪 *Test Notification*\n\nYour Telegram bot is successfully connected to Shree Bodhisatvvam! ✅`);
+        return res.status(200).json({ success: true, message: 'Test message sent to Telegram! Check your app.' });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to send.', error: err.message });
+    }
+});
+
 
 // -- 6. ROUTE: CREATE RAZORPAY ORDER --------------------------------
 // Called when customer clicks "Pay Now" -- before payment happens.
@@ -1665,7 +1686,7 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🌸 Bodhisatvvam server running on port ${PORT}`);
     console.log(`   Razorpay  : ${razorpay ? '✅ configured' : '❌ not set'}`);
     console.log(`   WhatsApp  : ${WHATSAPP_TOKEN ? '✅ configured' : '❌ not set'}`);
-    console.log(`   Telegram  : ${TELEGRAM_BOT_TOKEN ? '✅ configured' : '❌ not set'}`);
+    console.log(`   Telegram  : ${(TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) ? '✅ configured' : '❌ missing token or chat ID'}`);
     console.log(`   Sheet     : ${GOOGLE_SCRIPT_URL ? '✅ configured' : '❌ not set'}`);
     console.log(`   Supabase  : ${sbSync.isConfigured ? '✅ configured' : '❌ not set'}`);
     console.log(`   CORS      : ${ALLOWED_ORIGIN}`);
