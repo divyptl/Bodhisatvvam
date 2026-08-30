@@ -968,6 +968,230 @@
   .qv-carousel-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cream-dark); border: 1px solid var(--sage); cursor: none; transition: background 0.2s; }
   .qv-carousel-dots .dot.active { background: var(--amber); border-color: var(--amber); }
 
+  /* ── DIWALI SPECIAL COMBO SECTION ── */
+  .diwali-combo {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(160deg, #1a0a0a 0%, #2d0f0f 25%, #1c0e08 50%, #0d0a06 100%);
+    padding: 80px 60px;
+  }
+  .diwali-combo::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(212,170,96,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, rgba(196,124,58,0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(255,200,100,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .diwali-combo::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; opacity: 0.6;
+  }
+  .diwali-inner { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; }
+
+  /* Diwali Header */
+  .diwali-header { text-align: center; margin-bottom: 56px; }
+  .diwali-badge-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 20px; }
+  .diwali-limited-badge {
+    background: linear-gradient(135deg, #d4aa60 0%, #b8860b 100%);
+    color: #1a0a0a; padding: 8px 20px;
+    font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+    font-weight: 700; border-radius: 2px;
+    box-shadow: 0 4px 15px rgba(212,170,96,0.3);
+    animation: diwaliPulse 2s ease-in-out infinite;
+  }
+  .diwali-main-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 400; color: #d4aa60;
+    line-height: 1.15; margin-bottom: 16px;
+    text-shadow: 0 2px 30px rgba(212,170,96,0.3);
+  }
+  .diwali-main-title em { font-style: italic; color: #f0d68a; }
+  .diwali-subtitle {
+    font-size: 1rem; color: rgba(245,239,227,0.6);
+    max-width: 600px; margin: 0 auto;
+    line-height: 1.7;
+  }
+  .diwali-subtitle-hindi {
+    font-size: 0.92rem; color: rgba(212,170,96,0.7);
+    margin-top: 8px; font-style: italic;
+  }
+
+  /* Diwali Product Cards Grid */
+  .diwali-products {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 32px; margin-bottom: 56px;
+  }
+  .diwali-product-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(212,170,96,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: transform 0.4s, border-color 0.4s, box-shadow 0.4s;
+  }
+  .diwali-product-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(212,170,96,0.5);
+    box-shadow: 0 20px 60px rgba(212,170,96,0.15);
+  }
+  .diwali-card-img {
+    height: 300px; overflow: hidden;
+    position: relative;
+  }
+  .diwali-card-img img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.5s ease;
+  }
+  .diwali-product-card:hover .diwali-card-img img {
+    transform: scale(1.06);
+  }
+  .diwali-card-tag {
+    position: absolute; top: 16px; left: 16px;
+    background: linear-gradient(135deg, #d4aa60, #b8860b);
+    color: #1a0a0a; padding: 4px 14px;
+    font-size: 0.65rem; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .diwali-card-body { padding: 28px; }
+  .diwali-card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem; color: #d4aa60;
+    margin-bottom: 12px; font-weight: 500;
+  }
+  .diwali-card-benefits {
+    list-style: none; display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .diwali-card-benefits li {
+    background: rgba(212,170,96,0.1);
+    border: 1px solid rgba(212,170,96,0.2);
+    padding: 6px 14px; font-size: 0.78rem;
+    color: rgba(245,239,227,0.8);
+    letter-spacing: 0.04em;
+  }
+
+  /* Diwali Combo Price Block */
+  .diwali-combo-price {
+    text-align: center;
+    background: rgba(212,170,96,0.06);
+    border: 1px solid rgba(212,170,96,0.25);
+    border-radius: 4px;
+    padding: 40px;
+    margin-bottom: 40px;
+  }
+  .diwali-combo-label {
+    font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(245,239,227,0.5); margin-bottom: 8px;
+  }
+  .diwali-price-main {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(3rem, 6vw, 5rem);
+    font-weight: 500; color: #d4aa60;
+    text-shadow: 0 4px 20px rgba(212,170,96,0.3);
+    line-height: 1;
+  }
+  .diwali-price-original {
+    font-size: 1.1rem; color: rgba(245,239,227,0.35);
+    text-decoration: line-through; margin-top: 8px;
+  }
+
+  /* Diwali Features Row */
+  .diwali-features {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 40px;
+  }
+  .diwali-feature {
+    text-align: center;
+    padding: 20px 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(212,170,96,0.12);
+    border-radius: 4px;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .diwali-feature:hover {
+    border-color: rgba(212,170,96,0.35);
+    transform: translateY(-3px);
+  }
+  .diwali-feature-icon {
+    font-size: 1.6rem; margin-bottom: 8px; display: block;
+  }
+  .diwali-feature-text {
+    font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: rgba(245,239,227,0.6);
+    line-height: 1.5;
+  }
+
+  /* Diwali CTA */
+  .diwali-cta-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 24px; flex-wrap: wrap;
+  }
+  .diwali-add-btn {
+    background: linear-gradient(135deg, #d4aa60 0%, #b8860b 100%);
+    color: #1a0a0a; border: none;
+    padding: 18px 48px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.9rem; letter-spacing: 0.14em;
+    text-transform: uppercase; font-weight: 600;
+    cursor: none;
+    transition: all 0.3s;
+    box-shadow: 0 8px 30px rgba(212,170,96,0.3);
+  }
+  .diwali-add-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(212,170,96,0.45);
+  }
+  .diwali-stock-note {
+    font-size: 0.8rem; color: rgba(245,239,227,0.5);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .diwali-stock-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #e74c3c;
+    animation: diwaliPulse 1.5s ease-in-out infinite;
+  }
+
+  /* Diwali Bottom Text */
+  .diwali-bottom-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 24px; margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(212,170,96,0.15);
+  }
+  .diwali-bottom-card {
+    padding: 24px;
+    background: rgba(212,170,96,0.04);
+    border: 1px solid rgba(212,170,96,0.12);
+    border-radius: 4px;
+  }
+  .diwali-bottom-card p {
+    font-size: 0.88rem; color: rgba(245,239,227,0.6);
+    line-height: 1.7;
+  }
+  .diwali-bottom-card strong {
+    color: #d4aa60; font-weight: 600;
+  }
+
+  /* Floating Diya Particles */
+  .diya-particle {
+    position: absolute; pointer-events: none;
+    font-size: 1.2rem; opacity: 0;
+    animation: diyaFloat 6s ease-in-out infinite;
+  }
+  @keyframes diyaFloat {
+    0% { opacity: 0; transform: translateY(0) scale(0.5); }
+    20% { opacity: 0.7; }
+    80% { opacity: 0.4; }
+    100% { opacity: 0; transform: translateY(-120px) scale(1); }
+  }
+  @keyframes diwaliPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
   /* ── RESPONSIVE BASICS ── */
   @media (max-width: 1024px) {
     .hero { grid-template-columns: 1fr; min-height: auto; }
@@ -977,6 +1201,8 @@
     .products-grid { grid-template-columns: repeat(2, 1fr); }
     .footer-grid { grid-template-columns: 1fr 1fr 1fr; gap: 36px; }
     .testimonials-grid { grid-template-columns: 1fr 1fr; }
+    .diwali-products { grid-template-columns: 1fr 1fr; }
+    .diwali-features { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 680px) {
     .products-grid { grid-template-columns: 1fr; }
@@ -989,6 +1215,11 @@
     .whatsapp-float { bottom: 20px; left: 20px; width: 50px; height: 50px; }
     .whatsapp-float svg { width: 24px; height: 24px; }
     .whatsapp-float .wa-tooltip { display: none; }
+    .diwali-combo { padding: 60px 24px; }
+    .diwali-products { grid-template-columns: 1fr; }
+    .diwali-features { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .diwali-bottom-row { grid-template-columns: 1fr; }
+    .diwali-card-img { height: 220px; }
   }
 </style>
 </head>
@@ -1078,6 +1309,111 @@
     <div class="marquee-item"><span>🌟 Nadhi Jyotish</span><div class="marquee-dot"></div></div>
   </div>
 </div>
+
+<!-- ── DIWALI SPECIAL LIMITED EDITION COMBO ── -->
+<section class="diwali-combo fade-in-up" id="diwaliCombo">
+  <!-- Floating Diya Particles -->
+  <div class="diya-particle" style="left: 5%; bottom: 20%; animation-delay: 0s;">🪔</div>
+  <div class="diya-particle" style="left: 15%; bottom: 10%; animation-delay: 1.2s;">✨</div>
+  <div class="diya-particle" style="left: 30%; bottom: 30%; animation-delay: 2.5s;">🪔</div>
+  <div class="diya-particle" style="right: 25%; bottom: 15%; animation-delay: 0.8s;">✨</div>
+  <div class="diya-particle" style="right: 10%; bottom: 25%; animation-delay: 3.2s;">🪔</div>
+  <div class="diya-particle" style="right: 40%; bottom: 5%; animation-delay: 1.8s;">✨</div>
+  <div class="diya-particle" style="left: 50%; bottom: 35%; animation-delay: 4s;">🪔</div>
+
+  <div class="diwali-inner">
+    <!-- Header -->
+    <div class="diwali-header">
+      <div class="diwali-badge-row">
+        <span class="diwali-limited-badge">🪔 Limited Diwali Stock</span>
+      </div>
+      <h2 class="diwali-main-title">✨ Diwali Special —<br><em>Limited Edition</em> ✨</h2>
+      <p class="diwali-subtitle">इस दिवाली अपने घर और बिज़नेस में आमंत्रित करें माँ लक्ष्मी की दिव्य ऊर्जा, समृद्धि और सफलता</p>
+      <p class="diwali-subtitle-hindi">Invite divine energy, prosperity & success into your home and business this Diwali</p>
+    </div>
+
+    <!-- Product Cards -->
+    <div class="diwali-products">
+      <!-- Maa Lakshmi Divine Candle -->
+      <div class="diwali-product-card">
+        <div class="diwali-card-img">
+          <img src="/images/diwali/candle.png" alt="Maa Lakshmi Divine Candle - Diwali Special" loading="lazy">
+          <span class="diwali-card-tag">🕯️ Candle</span>
+        </div>
+        <div class="diwali-card-body">
+          <h3 class="diwali-card-title">Maa Lakshmi Divine Candle</h3>
+          <ul class="diwali-card-benefits">
+            <li>💰 Wealth</li>
+            <li>🌟 Prosperity</li>
+            <li>✨ Abundance</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Business Success Salt -->
+      <div class="diwali-product-card">
+        <div class="diwali-card-img">
+          <img src="/images/diwali/salt.png" alt="Business Success Salt - Diwali Special" loading="lazy">
+          <span class="diwali-card-tag">🧂 Salt</span>
+        </div>
+        <div class="diwali-card-body">
+          <h3 class="diwali-card-title">Business Success Salt</h3>
+          <ul class="diwali-card-benefits">
+            <li>📈 Business Growth</li>
+            <li>🏆 Success</li>
+            <li>⚡ Positive Energy</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Combo Price Block -->
+    <div class="diwali-combo-price">
+      <div class="diwali-combo-label">🎁 Special Diwali Combo — सिर्फ</div>
+      <div class="diwali-price-main">₹1,499/-</div>
+      <div class="diwali-price-original">Worth ₹1,998 — Save ₹499</div>
+    </div>
+
+    <!-- Feature Highlights -->
+    <div class="diwali-features">
+      <div class="diwali-feature">
+        <span class="diwali-feature-icon">🎁</span>
+        <span class="diwali-feature-text">Premium Diwali<br>Packaging</span>
+      </div>
+      <div class="diwali-feature">
+        <span class="diwali-feature-icon">🙏</span>
+        <span class="diwali-feature-text">Special Intention<br>& Blessings</span>
+      </div>
+      <div class="diwali-feature">
+        <span class="diwali-feature-icon">⭐</span>
+        <span class="diwali-feature-text">Limited<br>Edition</span>
+      </div>
+      <div class="diwali-feature">
+        <span class="diwali-feature-icon">🏠</span>
+        <span class="diwali-feature-text">Perfect for Home<br>& Business</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="diwali-cta-row">
+      <button class="diwali-add-btn" id="diwaliAddBtn" onclick="addDiwaliCombo(event)">🪔 Pre-Book Your Combo Now</button>
+      <span class="diwali-stock-note">
+        <span class="diwali-stock-dot"></span>
+        Limited Diwali Stock — Pre-Book Today
+      </span>
+    </div>
+
+    <!-- Bottom Info Row -->
+    <div class="diwali-bottom-row">
+      <div class="diwali-bottom-card">
+        <p>🪔 इस दिवाली सिर्फ दीपक नहीं जलाएँ... <strong>अपने जीवन में समृद्धि की नई ऊर्जा का स्वागत करें।</strong></p>
+      </div>
+      <div class="diwali-bottom-card">
+        <p>🛒 <strong>Orders Are Now Open!</strong> Limited Diwali Stock — Pre-Book Your Combo Today.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section class="about" id="about">
   <div class="about-visual fade-in-up">
@@ -1641,6 +1977,47 @@ function searchProducts() {
         }
     });
 }
+// ── DIWALI COMBO ADD TO CART ──
+function addDiwaliCombo(event) {
+  if (event) event.stopPropagation();
+
+  // Create a special combo product entry
+  const comboProduct = {
+    id: 9999,
+    name: 'Diwali Special Combo (Maa Lakshmi Candle + Business Success Salt)',
+    emoji: '🪔',
+    price: 1499,
+    category: 'combo',
+    desc: 'Limited Edition Diwali Combo with Premium Packaging',
+    rating: 5,
+    images: ['/images/diwali/combo-banner.png']
+  };
+
+  const existing = cart.find(i => i.id === 9999);
+  if (existing) {
+    existing.qty++;
+  } else {
+    cart.push({ ...comboProduct, qty: 1, notes: 'Diwali Special Limited Edition Combo' });
+  }
+
+  updateCart();
+  showToast('🪔', comboProduct.name, comboProduct.price);
+  toggleCart(); // Open cart to show the combo was added
+
+  // Visual feedback on button
+  const btn = document.getElementById('diwaliAddBtn');
+  if (btn) {
+    btn.textContent = '✅ Added to Cart!';
+    btn.style.background = 'linear-gradient(135deg, #2d6a4f, #1c3a28)';
+    btn.style.color = '#f5efe3';
+    setTimeout(() => {
+      btn.textContent = '🪔 Pre-Book Your Combo Now';
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 2500);
+  }
+}
+
 function addToCart(id, event) {
     if (event) event.stopPropagation();
 
