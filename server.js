@@ -1121,6 +1121,9 @@ app.post('/api/book-free', orderLimiter, async (req, res) => {
             ).catch(e => console.warn('WhatsApp notification failed:', e.message));
         }
 
+        // Send Telegram notification to admin
+        sendTelegramNotification(`🎁 *New Free Consultation Request!*\n\n*ID:* ${bookingId}\n*Name:* ${name}\n*Phone:* +${phone}\n*Date:* ${date}\n*Time:* ${slot}\n*Notes:* ${notes || 'None'}`);
+
         // Save to Supabase
         sbSync.saveBooking({
             booking_id: bookingId, name, phone,
