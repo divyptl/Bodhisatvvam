@@ -281,28 +281,112 @@
       font-family: 'Jost', 'Montserrat', sans-serif;
     }
 
-    .usb-contact-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 20px;
-      padding: 12px 32px;
-      background: #25D366;
-      color: white;
-      text-decoration: none;
-      font-family: 'Jost', 'Montserrat', sans-serif;
-      font-size: 0.8rem;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: all 0.3s ease;
-      border: none;
-      cursor: pointer;
+    /* Registration form replaces WhatsApp CTA */
+    .usb-reg-form {
+      max-width: 420px;
+      margin: 24px auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
-    .usb-contact-btn:hover {
-      background: #20b85a;
+    .usb-reg-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #d4aa60;
+      font-family: 'Jost', 'Montserrat', sans-serif;
+      margin-bottom: 4px;
+    }
+    .usb-reg-row {
+      display: flex;
+      gap: 12px;
+    }
+    .usb-reg-input {
+      flex: 1;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(212,170,96,0.3);
+      color: #f5efe3;
+      font-family: 'Jost', 'Montserrat', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .usb-reg-input::placeholder {
+      color: rgba(245,239,227,0.35);
+    }
+    .usb-reg-input:focus {
+      border-color: #d4aa60;
+      box-shadow: 0 0 0 3px rgba(212,170,96,0.15);
+    }
+    .usb-reg-btn {
+      padding: 16px 32px;
+      background: linear-gradient(135deg, #d4aa60 0%, #c47c3a 100%);
+      color: #0a0a1a;
+      border: none;
+      font-family: 'Jost', 'Montserrat', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .usb-reg-btn:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(37,211,102,0.3);
+      box-shadow: 0 8px 30px rgba(212,170,96,0.35);
+    }
+    .usb-reg-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .usb-reg-error {
+      color: #e09456;
+      font-size: 0.82rem;
+      font-family: 'Jost', 'Montserrat', sans-serif;
+      min-height: 20px;
+      text-align: center;
+    }
+
+    /* Success state */
+    .usb-reg-success {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      background: rgba(45,106,79,0.15);
+      border: 1px solid rgba(45,106,79,0.3);
+      margin-top: 20px;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+      animation: usb-fadeIn 0.5s ease;
+    }
+    .usb-reg-success.show { display: block; }
+    .usb-reg-success-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .usb-reg-success-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      color: #a8c5aa;
+      margin-bottom: 6px;
+    }
+    .usb-reg-success-text {
+      font-size: 0.85rem;
+      color: rgba(245,239,227,0.7);
+      line-height: 1.6;
+      font-family: 'Jost', 'Montserrat', sans-serif;
+    }
+    .usb-reg-success-id {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.95rem;
+      color: #d4aa60;
+      margin-top: 8px;
+    }
+
+    @keyframes usb-fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* Decorative divider lines */
@@ -320,6 +404,8 @@
       .usb-detail-card { min-width: 260px; }
       .usb-benefits { grid-template-columns: 1fr; max-width: 320px; }
       .usb-free-badge { font-size: 0.85rem; padding: 10px 28px; }
+      .usb-reg-row { flex-direction: column; }
+      .usb-reg-form { padding: 0 8px; }
     }
   `;
   document.head.appendChild(style);
@@ -374,11 +460,121 @@
       </div>
 
       <br>
-      <a href="https://wa.me/91${SESSION_DATA.phone}?text=Hi%20Neepa%20Ma'am%2C%20I%20want%20to%20join%20the%20Amavasya%20Meditation%20on%20${encodeURIComponent(SESSION_DATA.date)}.%20Please%20share%20the%20Google%20Meet%20link.%20🙏" target="_blank" class="usb-contact-btn">
-        📞 Register via WhatsApp — ${SESSION_DATA.phone}
-      </a>
+      <div class="usb-reg-label">🙏 Register Now — It's Free</div>
+      <div class="usb-reg-form" id="usbRegForm">
+        <div class="usb-reg-row">
+          <input type="text" class="usb-reg-input" id="usbRegName" placeholder="Your Full Name" maxlength="100">
+          <input type="tel" class="usb-reg-input" id="usbRegPhone" placeholder="WhatsApp Number" maxlength="15">
+        </div>
+        <button class="usb-reg-btn" id="usbRegBtn" onclick="window._usbRegister()">
+          🌙 Register for Free Session
+        </button>
+        <div class="usb-reg-error" id="usbRegError"></div>
+      </div>
+      <div class="usb-reg-success" id="usbRegSuccess">
+        <div class="usb-reg-success-icon">🌸</div>
+        <div class="usb-reg-success-title">You're Registered!</div>
+        <div class="usb-reg-success-text" id="usbRegSuccessText">
+          We'll send the Google Meet link to your WhatsApp before the session.
+        </div>
+        <div class="usb-reg-success-id" id="usbRegSuccessId"></div>
+      </div>
     </div>
   `;
+
+  // Registration form submission handler
+  window._usbRegister = async function() {
+    const nameEl = document.getElementById('usbRegName');
+    const phoneEl = document.getElementById('usbRegPhone');
+    const btn = document.getElementById('usbRegBtn');
+    const errEl = document.getElementById('usbRegError');
+    const form = document.getElementById('usbRegForm');
+    const successEl = document.getElementById('usbRegSuccess');
+
+    const name = nameEl.value.trim();
+    const phone = phoneEl.value.trim();
+    errEl.textContent = '';
+
+    // Validation
+    if (!name || name.length < 2) {
+      errEl.textContent = 'Please enter your full name.';
+      nameEl.focus();
+      return;
+    }
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) {
+      errEl.textContent = 'Please enter a valid phone number.';
+      phoneEl.focus();
+      return;
+    }
+
+    // Check if already registered (localStorage)
+    const regKey = 'usb_meditation_' + SESSION_DATA.dateISO;
+    if (localStorage.getItem(regKey)) {
+      errEl.textContent = 'You have already registered for this session! 🌸';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Registering…';
+
+    try {
+      const API = window.location.origin;
+      const res = await fetch(API + '/api/meditation-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone: digits,
+          sessionTitle: SESSION_DATA.title,
+          sessionDate: SESSION_DATA.dateISO,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Store in localStorage to prevent re-registration
+        localStorage.setItem(regKey, JSON.stringify({ id: data.registrationId, name }));
+
+        // Show success
+        form.style.display = 'none';
+        document.querySelector('.usb-reg-label').style.display = 'none';
+        successEl.classList.add('show');
+        document.getElementById('usbRegSuccessText').textContent = data.message;
+        document.getElementById('usbRegSuccessId').textContent = 'Registration ID: ' + data.registrationId;
+      } else {
+        errEl.textContent = data.message || 'Registration failed. Please try again.';
+      }
+    } catch (e) {
+      errEl.textContent = 'Could not connect. Please try again.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🌙 Register for Free Session';
+    }
+  };
+
+  // Check if already registered on page load
+  function checkExistingRegistration() {
+    const regKey = 'usb_meditation_' + SESSION_DATA.dateISO;
+    const existing = localStorage.getItem(regKey);
+    if (existing) {
+      try {
+        const data = JSON.parse(existing);
+        const form = document.getElementById('usbRegForm');
+        const label = banner.querySelector('.usb-reg-label');
+        const successEl = document.getElementById('usbRegSuccess');
+        if (form) form.style.display = 'none';
+        if (label) label.style.display = 'none';
+        if (successEl) {
+          successEl.classList.add('show');
+          document.getElementById('usbRegSuccessText').textContent =
+            'You\'re all set! We\'ll send the Google Meet link to your WhatsApp before the session.';
+          document.getElementById('usbRegSuccessId').textContent =
+            'Registration ID: ' + (data.id || '—');
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }
 
   // Insert the banner
   // Strategy: Find the best insertion point depending on the page
@@ -411,8 +607,12 @@
 
   // Wait for DOM
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', insertBanner);
+    document.addEventListener('DOMContentLoaded', () => {
+      insertBanner();
+      checkExistingRegistration();
+    });
   } else {
     insertBanner();
+    checkExistingRegistration();
   }
 })();

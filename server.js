@@ -1632,6 +1632,96 @@ async function checkAbandonedCarts() {
     } catch (e) { console.error('Abandoned cart check error:', e.message); }
 }
 
+// ═══════════════════════════════════════════════════════════
+//  FREE MEDITATION SESSION REGISTRATION
+//  Public endpoint — no payment, no login required.
+//  Saves to Supabase + Google Sheet + notifies via Telegram.
+// ═══════════════════════════════════════════════════════════
+
+const meditationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { success: false, message: 'Too many registrations. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.post('/api/meditation-register', meditationLimiter, async (req, res) => {
+    const { name, phone, sessionTitle, sessionDate } = req.body;
+
+    // Validation
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+        return res.status(400).json({ success: false, message: 'Please enter your full name.' });
+    }
+    if (!validatePhone(phone)) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid phone number.' });
+    }
+
+    const sanitizedPhone = phone.replace(/\D/g, '');
+    const sanitizedName = name.trim();
+    const regId = '#MED-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
+
+    console.log(`🧘 Meditation registration | ${regId} | ${sanitizedName} | +${sanitizedPhone} | ${sessionTitle || 'Amavasya Meditation'}`);
+
+    try {
+        // 1. Save to Supabase
+        if (sbSync.supabase) {
+            try {
+                await sbSync.supabase.from('meditation_registrations').insert({
+                    registration_id: regId,
+                    name: sanitizedName,
+                    phone: sanitizedPhone,
+                    session_title: sessionTitle || 'Amavasya Meditation',
+                    session_date: sessionDate || null,
+                });
+                console.log(`✅ Meditation registration saved to Supabase → ${regId}`);
+            } catch (dbErr) {
+                console.warn(`⚠️ Supabase save failed (non-critical): ${dbErr.message}`);
+            }
+        }
+
+        // 2. Save to Google Sheet
+        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_SECRET) {
+            try {
+                await axios.post(GOOGLE_SCRIPT_URL, {
+                    secret: GOOGLE_SCRIPT_SECRET,
+                    action: 'addMeditationRegistration',
+                    registrationId: regId,
+                    name: sanitizedName,
+                    phone: sanitizedPhone,
+                    sessionTitle: sessionTitle || 'Amavasya Meditation',
+                    sessionDate: sessionDate || '',
+                    registeredAt: new Date().toISOString(),
+                }, { headers: { 'Content-Type': 'application/json' }, timeout: 25000 });
+                console.log(`✅ Meditation registration logged to Sheet → ${regId}`);
+            } catch (sheetErr) {
+                console.warn(`⚠️ Sheet log failed (non-critical): ${sheetErr.message}`);
+            }
+        }
+
+        // 3. Notify owner via Telegram
+        sendTelegramNotification(
+            `🧘 *New Meditation Registration!*\n\n` +
+            `*ID:* ${regId}\n` +
+            `*Name:* ${sanitizedName}\n` +
+            `*Phone:* +${sanitizedPhone}\n` +
+            `*Session:* ${sessionTitle || 'Amavasya Meditation'}\n` +
+            `*Date:* ${sessionDate || 'Not specified'}`
+        ).catch(() => {});
+
+        return res.status(200).json({
+            success: true,
+            registrationId: regId,
+            message: `You're registered! We'll send the Google Meet link to +${sanitizedPhone} before the session. 🌸`,
+        });
+
+    } catch (err) {
+        console.error(`❌ Meditation registration error: ${err.message}`);
+        return res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
+    }
+});
+
+
 // -- 10. START ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', async () => {
