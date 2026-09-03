@@ -1088,58 +1088,7 @@ app.post('/api/admin/products/bulk-update-price', requireAdmin, (req, res) => {
 
 
 
-// -- FREE CONSULTATION BOOKING (no payment needed) ------------------
-app.post('/api/book-free', orderLimiter, async (req, res) => {
-    const { sessionId, sessionName, date, slot, name, phone, email, notes } = req.body;
-
-    if (!sessionId || !date || !slot || !name || !phone) {
-        return res.status(400).json({ success: false, message: 'Missing required fields.' });
-    }
-
-    const bookingId = 'BDH-FREE-' + Date.now().toString(36).toUpperCase();
-    const timestamp = new Date().toISOString();
-
-    try {
-        // Log to Google Sheet
-        if (GOOGLE_SCRIPT_URL) {
-            await axios.post(GOOGLE_SCRIPT_URL, {
-                secret: GOOGLE_SCRIPT_SECRET,
-                type: 'booking',
-                bookingId, sessionName, date, slot,
-                name, phone, email, notes,
-                price: '0 (Free Consultation)', timestamp,
-            }).catch(e => console.warn('Sheet log failed:', e.message));
-        }
-
-        // WhatsApp notification to admin
-        if (WHATSAPP_TOKEN && PHONE_NUMBER_ID) {
-            const msg = `🎁 *New Free Consultation Request*\n\n📋 *ID:* ${bookingId}\n👤 *Name:* ${name}\n📱 *Phone:* +${phone}\n📅 *Date:* ${date}\n⏰ *Time:* ${slot}\n📝 *Notes:* ${notes || 'None'}`;
-            await axios.post(
-                `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`,
-                { messaging_product: 'whatsapp', to: phone, type: 'text', text: { body: msg } },
-                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } }
-            ).catch(e => console.warn('WhatsApp notification failed:', e.message));
-        }
-
-        // Send Telegram notification to admin
-        sendTelegramNotification(`🎁 *New Free Consultation Request!*\n\n*ID:* ${bookingId}\n*Name:* ${name}\n*Phone:* +${phone}\n*Date:* ${date}\n*Time:* ${slot}\n*Notes:* ${notes || 'None'}`);
-
-        // Save to Supabase
-        sbSync.saveBooking({
-            booking_id: bookingId, name, phone,
-            email: '', session_name: sessionName || 'Free Consultation',
-            date, time_slot: slot, price: 0, payment_id: '',
-            notes: notes || ''
-        });
-
-        console.log(`✅ Free consultation booked: ${bookingId} for ${name} on ${date} at ${slot}`);
-        return res.status(200).json({ success: true, bookingId, message: 'Free consultation confirmed!' });
-
-    } catch (err) {
-        console.error('book-free error:', err.message);
-        return res.status(500).json({ success: false, message: 'Server error. Please try WhatsApp.' });
-    }
-});
+// NOTE: Free consultation endpoint removed — all sessions now require payment via /api/create-booking + /api/verify-booking
 
 
 // ═══════════════════════════════════════════════════════════
