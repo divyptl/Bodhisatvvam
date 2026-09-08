@@ -10,28 +10,32 @@
 
   const SESSION_DATA = {
     active: true,
-    title: 'Special Amavasya Meditation',
-    date: '10th September 2026',
-    dateISO: '2026-09-10',
-    time: '9:30 PM – 10:15 PM IST',
-    duration: '45 Minutes of Deep Divine Connection',
-    platform: 'Google Meet',
+    title: '21 Days Spiritual Transformation & Healing Journey',
+    date: '14th September 2026',
+    dateISO: '2026-09-14',
+    time: '5:00 AM / 9:30 PM',
+    duration: '21 Days of Healing & Transformation',
+    platform: 'Online Video Call',
     platformIcon: '📹',
-    price: 'FREE FOR ALL',
+    price: '₹2100 FOR 21 DAYS',
     coachName: 'Neepa Patel',
     coachTitle: 'Life Coach | Pranic Healer | NLP Trainer & Counselor',
     phone: '9824867959',
-    tagline: 'Amavasya Night',
-    subtitle: 'Open to All — Let\'s Meditate Together and Manifest Miracles',
+    tagline: 'Heal • Balance • Manifest • Transform',
+    subtitle: 'Release old energies, heal from within and step into a more powerful, peaceful & abundant version of yourself.',
     benefits: [
-      'Release Negativity & Old Energy',
-      'Deep Healing of Mind, Body & Soul',
-      'Attract Abundance, Peace & Positivity',
-      'Strengthen Intuition & Inner Clarity',
-      'Manifest Your Desires with Divine Support',
-      'Experience Deep Calm, Lightness & Higher Energy'
+      'Energy & Body Cleansing',
+      'Aura Cleansing & Protection',
+      '7 Chakra Balancing',
+      'Emotional & Inner Child Healing',
+      'Abundance & Money Healing',
+      'Manifestation & Intention Activation',
+      'Deep Protection & Negative Energy Release',
+      'Self-Love & Confidence',
+      'Higher Self & Spiritual Connection',
+      'Karmic Release & Life Transformation'
     ],
-    callToAction: 'Your Presence Matters… Feel the Divine Energy, Heal & Transform Your Life.'
+    callToAction: 'Your Healing Journey Starts Here...'
   };
 
   // Don't show on admin pages
@@ -417,14 +421,14 @@
   banner.innerHTML = `
     <div class="usb-inner">
       <div class="usb-eyebrow">Upcoming Session</div>
-      <h2 class="usb-title">Special <em>Amavasya Meditation</em></h2>
-      <div class="usb-tagline-pill">🌑 ${SESSION_DATA.tagline}</div>
+      <h2 class="usb-title">${SESSION_DATA.title.split('&').map((p, i) => i === 0 ? p + ' & <br><em>' : p + '</em>').join('')}</h2>
+      <div class="usb-tagline-pill">✨ ${SESSION_DATA.tagline}</div>
 
       <div class="usb-details-row">
         <div class="usb-detail-card">
           <div class="usb-detail-label">📅 Date</div>
           <div class="usb-detail-value">${SESSION_DATA.date}</div>
-          <div class="usb-detail-sub">Amavasya Night</div>
+          <div class="usb-detail-sub">Daily Sessions</div>
         </div>
         <div class="usb-detail-card">
           <div class="usb-detail-label">🕘 Time</div>
@@ -444,7 +448,7 @@
 
       <div class="usb-divider"></div>
 
-      <div style="margin-bottom: 10px; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: #d4aa60; font-family: 'Jost','Montserrat',sans-serif;">Benefits of Amavasya Meditation</div>
+      <div style="margin-bottom: 10px; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: #d4aa60; font-family: 'Jost','Montserrat',sans-serif;">What You Will Experience</div>
       <div class="usb-benefits">
         ${SESSION_DATA.benefits.map(b => `<div class="usb-benefit">${b}</div>`).join('')}
       </div>
@@ -460,121 +464,14 @@
       </div>
 
       <br>
-      <div class="usb-reg-label">🙏 Register Now — It's Free</div>
+      <div class="usb-reg-label">🙏 Limited Seats Available</div>
       <div class="usb-reg-form" id="usbRegForm">
-        <div class="usb-reg-row">
-          <input type="text" class="usb-reg-input" id="usbRegName" placeholder="Your Full Name" maxlength="100">
-          <input type="tel" class="usb-reg-input" id="usbRegPhone" placeholder="WhatsApp Number" maxlength="15">
-        </div>
-        <button class="usb-reg-btn" id="usbRegBtn" onclick="window._usbRegister()">
-          🌙 Register for Free Session
+        <button class="usb-reg-btn" onclick="window.location.href='/booking.html?session=21%20Days%20Spiritual%20Transformation'">
+          🌙 Book Your Journey Now (₹2100)
         </button>
-        <div class="usb-reg-error" id="usbRegError"></div>
-      </div>
-      <div class="usb-reg-success" id="usbRegSuccess">
-        <div class="usb-reg-success-icon">🌸</div>
-        <div class="usb-reg-success-title">You're Registered!</div>
-        <div class="usb-reg-success-text" id="usbRegSuccessText">
-          We'll send the Google Meet link to your WhatsApp before the session.
-        </div>
-        <div class="usb-reg-success-id" id="usbRegSuccessId"></div>
       </div>
     </div>
   `;
-
-  // Registration form submission handler
-  window._usbRegister = async function() {
-    const nameEl = document.getElementById('usbRegName');
-    const phoneEl = document.getElementById('usbRegPhone');
-    const btn = document.getElementById('usbRegBtn');
-    const errEl = document.getElementById('usbRegError');
-    const form = document.getElementById('usbRegForm');
-    const successEl = document.getElementById('usbRegSuccess');
-
-    const name = nameEl.value.trim();
-    const phone = phoneEl.value.trim();
-    errEl.textContent = '';
-
-    // Validation
-    if (!name || name.length < 2) {
-      errEl.textContent = 'Please enter your full name.';
-      nameEl.focus();
-      return;
-    }
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) {
-      errEl.textContent = 'Please enter a valid phone number.';
-      phoneEl.focus();
-      return;
-    }
-
-    // Check if already registered (localStorage)
-    const regKey = 'usb_meditation_' + SESSION_DATA.dateISO;
-    if (localStorage.getItem(regKey)) {
-      errEl.textContent = 'You have already registered for this session! 🌸';
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = '⏳ Registering…';
-
-    try {
-      const API = window.location.origin;
-      const res = await fetch(API + '/api/meditation-register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          phone: digits,
-          sessionTitle: SESSION_DATA.title,
-          sessionDate: SESSION_DATA.dateISO,
-        }),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        // Store in localStorage to prevent re-registration
-        localStorage.setItem(regKey, JSON.stringify({ id: data.registrationId, name }));
-
-        // Show success
-        form.style.display = 'none';
-        document.querySelector('.usb-reg-label').style.display = 'none';
-        successEl.classList.add('show');
-        document.getElementById('usbRegSuccessText').textContent = data.message;
-        document.getElementById('usbRegSuccessId').textContent = 'Registration ID: ' + data.registrationId;
-      } else {
-        errEl.textContent = data.message || 'Registration failed. Please try again.';
-      }
-    } catch (e) {
-      errEl.textContent = 'Could not connect. Please try again.';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '🌙 Register for Free Session';
-    }
-  };
-
-  // Check if already registered on page load
-  function checkExistingRegistration() {
-    const regKey = 'usb_meditation_' + SESSION_DATA.dateISO;
-    const existing = localStorage.getItem(regKey);
-    if (existing) {
-      try {
-        const data = JSON.parse(existing);
-        const form = document.getElementById('usbRegForm');
-        const label = banner.querySelector('.usb-reg-label');
-        const successEl = document.getElementById('usbRegSuccess');
-        if (form) form.style.display = 'none';
-        if (label) label.style.display = 'none';
-        if (successEl) {
-          successEl.classList.add('show');
-          document.getElementById('usbRegSuccessText').textContent =
-            'You\'re all set! We\'ll send the Google Meet link to your WhatsApp before the session.';
-          document.getElementById('usbRegSuccessId').textContent =
-            'Registration ID: ' + (data.id || '—');
-        }
-      } catch (e) { /* ignore */ }
-    }
-  }
 
   // Insert the banner
   // Strategy: Find the best insertion point depending on the page
@@ -607,12 +504,8 @@
 
   // Wait for DOM
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      insertBanner();
-      checkExistingRegistration();
-    });
+    document.addEventListener('DOMContentLoaded', insertBanner);
   } else {
     insertBanner();
-    checkExistingRegistration();
   }
 })();

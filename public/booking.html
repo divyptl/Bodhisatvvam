@@ -488,9 +488,11 @@ const REGULAR_TIME_SLOTS = [
   '07:00 PM',
 ];
 const MEDITATION_TIME_SLOTS = ['05:00 AM', '09:30 AM'];
+const SPIRITUAL_TIME_SLOTS = ['05:00 AM', '09:30 PM'];
 
 // Session types — Prices updated to 500, Group Meditation added
 const SESSIONS = [
+  { id: 'spiritual_21days', name: '21 Days Spiritual Transformation', icon: '✨', desc: 'Heal, Balance, Manifest, Transform. (5:00-5:30 AM or 9:30-10:00 PM)', price: 2100, duration: '21 Days' },
   { id: 'personal_consultation', name: 'Personal Consultation', icon: '🎁', desc: 'A focused 30-min intro call to understand your needs and find the right wellness path.', price: 1100, duration: '30 min' },
   { id: 'chakra', name: 'Mindfulness & Balance Coaching', icon: '✨', desc: 'Restore inner balance and alignment through guided mindfulness techniques.', price: 500, duration: '60 min' },
   { id: 'nlp', name: 'NLP-based Life Coaching', icon: '🧠', desc: 'Rewire your mindset with Neuro-Linguistic Programming.', price: 500, duration: '60 min' },
@@ -575,6 +577,8 @@ function renderCalendar() {
   // 👇 NEW: Determine which slot list to check based on the selected session
   const slotsToUse = (selectedSession && selectedSession.id === 'group_meditation') 
                      ? MEDITATION_TIME_SLOTS 
+                     : (selectedSession && selectedSession.id === 'spiritual_21days')
+                     ? SPIRITUAL_TIME_SLOTS
                      : REGULAR_TIME_SLOTS;
 
   let html = DAYS.map(d => `<div class="cal-day-label">${d}</div>`).join('');
@@ -639,7 +643,11 @@ function renderSlots() {
     return;
   }
   // Determine which list of times to show
-  const slotsToUse = selectedSession.id === 'group_meditation' ? MEDITATION_TIME_SLOTS : REGULAR_TIME_SLOTS;
+  const slotsToUse = (selectedSession.id === 'group_meditation') 
+                     ? MEDITATION_TIME_SLOTS 
+                     : (selectedSession.id === 'spiritual_21days')
+                     ? SPIRITUAL_TIME_SLOTS
+                     : REGULAR_TIME_SLOTS;
   const booked = bookedSlots[selectedDate] || [];
 
   container.innerHTML = `<div class="slots-grid">` +
