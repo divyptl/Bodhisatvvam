@@ -476,7 +476,14 @@
   // Insert the banner
   // Strategy: Find the best insertion point depending on the page
   function insertBanner() {
-    // For index.html — insert before the footer
+    // For index.html — insert before the diwali section
+    const diwaliSection = document.getElementById('diwaliCombo');
+    if (diwaliSection) {
+      diwaliSection.parentNode.insertBefore(banner, diwaliSection);
+      return;
+    }
+
+    // Fallback: insert before the footer
     const footer = document.querySelector('footer');
     if (footer) {
       footer.parentNode.insertBefore(banner, footer);
