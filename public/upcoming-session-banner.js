@@ -404,12 +404,25 @@
     /* Responsive */
     @media (max-width: 768px) {
       .usb-inner { padding: 40px 20px; }
-      .usb-details-row { flex-direction: column; align-items: center; }
-      .usb-detail-card { min-width: 260px; }
+      .usb-details-row { flex-direction: column; align-items: center; gap: 12px; }
+      .usb-detail-card { min-width: auto; width: 100%; max-width: 320px; }
       .usb-benefits { grid-template-columns: 1fr; max-width: 320px; }
       .usb-free-badge { font-size: 0.85rem; padding: 10px 28px; }
       .usb-reg-row { flex-direction: column; }
       .usb-reg-form { padding: 0 8px; }
+      .usb-title { font-size: clamp(1.6rem, 4vw, 2.4rem); }
+      .usb-subtitle { font-size: 1.1rem; }
+      .usb-coach { padding: 10px 20px; flex-wrap: wrap; justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .usb-inner { padding: 32px 16px; }
+      .usb-eyebrow { font-size: 0.6rem; letter-spacing: 0.2em; }
+      .usb-tagline-pill { font-size: 0.65rem; padding: 5px 16px; }
+      .usb-detail-card { padding: 12px 16px; }
+      .usb-detail-value { font-size: 1rem; }
+      .usb-benefit { font-size: 0.78rem; }
+      .usb-free-badge { font-size: 0.78rem; padding: 10px 20px; }
+      .usb-reg-btn { padding: 14px 24px; font-size: 0.82rem; }
     }
   `;
   document.head.appendChild(style);

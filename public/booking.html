@@ -331,10 +331,37 @@
   }
   @media (max-width: 768px) {
     nav { padding: 16px 24px; }
+    .nav-logo { font-size: 1.3rem; gap: 8px; }
+    .nav-logo img { height: 28px; }
     .hero { padding: 40px 24px 60px; }
+    .hero-title { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+    .hero-sub { font-size: 0.88rem; }
     .session-section { padding: 0 20px; }
-    .session-grid { grid-template-columns: repeat(2, 1fr); }
-    .booking-section { grid-template-columns: 1fr; padding: 0 20px; }
+    .session-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .session-card { padding: 20px 16px; }
+    .session-icon { font-size: 1.6rem; margin-bottom: 8px; }
+    .session-name { font-size: 0.82rem; }
+    .session-price { font-size: 1.3rem; }
+    .session-desc { font-size: 0.72rem; }
+    .booking-section { grid-template-columns: 1fr; padding: 0 20px; margin: 32px auto 60px; }
+    .panel-body { padding: 18px 20px; }
+    .cal-nav-btn { width: 28px; height: 28px; }
+    .slot-btn { padding: 8px 14px; font-size: 0.78rem; }
+    .form-input, .form-select { padding: 10px 14px; font-size: 0.88rem; }
+    .book-btn { padding: 14px; font-size: 0.85rem; }
+    .success-modal { padding: 40px 24px; }
+  }
+  @media (max-width: 480px) {
+    nav { padding: 14px 16px; }
+    .nav-logo { font-size: 1.1rem; }
+    .nav-logo img { height: 24px; }
+    .nav-back { font-size: 0.68rem; }
+    .hero { padding: 32px 16px 48px; }
+    .hero-title { font-size: 1.6rem; }
+    .session-section { padding: 0 16px; }
+    .session-grid { grid-template-columns: 1fr; gap: 10px; }
+    .booking-section { padding: 0 16px; }
+    .panel-header { padding: 16px 20px; }
   }
 </style>
 </head>
