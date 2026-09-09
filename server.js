@@ -1739,6 +1739,14 @@ app.listen(PORT, '0.0.0.0', async () => {
     // modified (added/edited/deleted) via the admin panel since the last deploy.
     if (sbSync.isConfigured) {
         await sbSync.pullFromSupabase();
+        
+        // Ensure new products are in Supabase
+        const products = readProducts();
+        const newProdIds = [314, 315, 148, 149, 150];
+        const toSync = products.filter(p => newProdIds.includes(p.id));
+        for (const p of toSync) {
+            await sbSync.syncProduct(p);
+        }
     }
 
     // Check for abandoned carts every 30 minutes

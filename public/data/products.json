@@ -1131,5 +1131,44 @@
     "rating": 5,
     "badge": "",
     "images": []
+  },
+  {
+    "id": 148,
+    "name": "Healing Salt Bath (500g)",
+    "emoji": "🧂",
+    "category": "salts",
+    "desc": "Purify, heal, and manifest. 100% Natural handcrafted bath salt.",
+    "price": 600,
+    "rating": 5,
+    "badge": "New",
+    "images": [
+      "/images/healing-salt-bath.jpg"
+    ]
+  },
+  {
+    "id": 149,
+    "name": "Healing Salt Bath (1kg)",
+    "emoji": "🧂",
+    "category": "salts",
+    "desc": "Purify, heal, and manifest. 100% Natural handcrafted bath salt.",
+    "price": 1100,
+    "rating": 5,
+    "badge": "New",
+    "images": [
+      "/images/healing-salt-bath.jpg"
+    ]
+  },
+  {
+    "id": 150,
+    "name": "Healing Salt Bath (2kg)",
+    "emoji": "🧂",
+    "category": "salts",
+    "desc": "Purify, heal, and manifest. 100% Natural handcrafted bath salt.",
+    "price": 2100,
+    "rating": 5,
+    "badge": "New",
+    "images": [
+      "/images/healing-salt-bath.jpg"
+    ]
   }
 ]
