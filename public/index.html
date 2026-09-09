@@ -1220,22 +1220,6 @@
     .card-actions { transform: translateY(0) !important; }
   }
 
-  /* ══ PROMO BANNERS (replaces inline styles) ══ */
-  .promo-banners {
-    padding: 60px;
-    display: flex;
-    gap: 40px;
-    justify-content: center;
-    flex-wrap: wrap;
-    background: var(--cream-dark);
-  }
-  .promo-banners img {
-    max-width: 100%;
-    width: 500px;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    cursor: pointer;
-  }
 
   /* ══ RESPONSIVE — TABLET (≤1024px) ══ */
   @media (max-width: 1024px) {
@@ -1252,7 +1236,7 @@
     .testimonials-grid { grid-template-columns: 1fr 1fr; }
     .diwali-products { grid-template-columns: 1fr 1fr; }
     .diwali-features { grid-template-columns: repeat(2, 1fr); }
-    .promo-banners { padding: 40px 30px; gap: 24px; }
+
   }
 
   /* ══ RESPONSIVE — MOBILE (≤680px) ══ */
@@ -1361,9 +1345,6 @@
     .whatsapp-float svg { width: 24px; height: 24px; }
     .whatsapp-float .wa-tooltip { display: none; }
 
-    /* ── Promo Banners ── */
-    .promo-banners { padding: 32px 20px; gap: 20px; flex-direction: column; align-items: center; }
-    .promo-banners img { width: 100%; }
 
     /* ── Diwali Section ── */
     .diwali-combo { padding: 48px 20px; }
@@ -1417,7 +1398,7 @@
     .diwali-feature-icon { font-size: 1.3rem; }
     .diwali-feature-text { font-size: 0.65rem; }
 
-    .promo-banners { padding: 24px 16px; gap: 16px; }
+
 
     .modal-overlay { padding: 8px; }
     .checkout-modal { max-height: 95vh; }
@@ -1513,11 +1494,6 @@
   </div>
 </div>
 
-<!-- ── NEW PRODUCT BANNERS ── -->
-<section class="promo-banners fade-in-up">
-  <img src="/images/tea-light-candles.jpg" alt="Premium Tea Light Candles" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'});">
-  <img src="/images/healing-salt-bath.jpg" alt="Healing Salt Bath" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'});">
-</section>
 
 <!-- ── DIWALI SPECIAL LIMITED EDITION COMBO ── -->
 <section class="diwali-combo fade-in-up" id="diwaliCombo">
